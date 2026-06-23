@@ -109,7 +109,7 @@ export default function Register() {
                   {["client","editor"].map(r => (
                     <button type="button" key={r} onClick={()=>set("role", r)} data-testid={`role-${r}`}
                       className={`text-sm py-2 rounded-full font-semibold transition-all ${form.role===r ? "bg-ink text-white" : "text-gray-700"}`}>
-                      I'm a {r}
+                      I'm {r === "editor" ? "an" : "a"} {r}
                     </button>
                   ))}
                 </div>

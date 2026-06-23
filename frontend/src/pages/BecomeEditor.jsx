@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
@@ -14,19 +14,23 @@ import { CheckCircle2, Wand2, Briefcase, Loader2 } from "lucide-react";
  *   - If already editor / admin → just goes to onboarding
  */
 export default function BecomeEditor() {
-  const { user, refresh } = useAuth();
+  const { user, ready, refresh } = useAuth();
   const nav = useNavigate();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  if (user === false) {
-    // not logged in — push to register
-    nav("/register?role=editor", { replace: true });
-    return null;
-  }
-  if (user && (user.role === "editor" || user.role === "admin")) {
-    nav("/editor/onboarding", { replace: true });
-    return null;
+  // Redirect logic in effect to avoid setState-during-render
+  useEffect(() => {
+    if (!ready) return;
+    if (user === false) {
+      nav("/register?role=editor", { replace: true });
+    } else if (user && (user.role === "editor" || user.role === "admin")) {
+      nav("/editor/onboarding", { replace: true });
+    }
+  }, [ready, user, nav]);
+
+  if (!ready || !user || user === false || (user && (user.role === "editor" || user.role === "admin"))) {
+    return <div className="min-h-[60vh] flex items-center justify-center text-gray-500">Loading…</div>;
   }
 
   const upgrade = async () => {
