@@ -1,0 +1,136 @@
+{
+  "theme": "light",
+  "archetype": "Archetype 4: Swiss & High-Contrast (Variant: Premium SaaS)",
+  "design_philosophy": "Fiverr meets Stripe & Apple. A frictionless, high-trust marketplace for elite video editors. The UI must feel like a secure, established financial/business tool rather than a generic gig board. The aggressive neon gradient is used as a functional 'laser pointer' to draw attention to high-value actions, verifications, and progress, standing out sharply against a sterile, high-contrast white/slate canvas.",
+  "colors": {
+    "background": {
+      "base": "#F8FAFC",
+      "surface": "#FFFFFF",
+      "dark_surface": "#0A0A0A",
+      "subtle": "#F1F5F9"
+    },
+    "text": {
+      "primary": "#111827",
+      "secondary": "#4B5563",
+      "muted": "#9CA3AF",
+      "inverse": "#FFFFFF",
+      "accent": "#22C55E"
+    },
+    "brand": {
+      "gradient": "linear-gradient(135deg, #39FF14 0%, #DFFF00 100%)",
+      "gradient_from": "#39FF14",
+      "gradient_to": "#DFFF00",
+      "dark_accent": "#0A0A0A"
+    },
+    "border": {
+      "default": "#E5E7EB",
+      "focus": "#39FF14",
+      "dark": "#1F2937"
+    }
+  },
+  "typography": {
+    "fonts": {
+      "heading": "Outfit, sans-serif",
+      "body": "Plus Jakarta Sans, sans-serif",
+      "mono": "JetBrains Mono, monospace"
+    },
+    "scales": {
+      "h1": "text-5xl sm:text-6xl tracking-tight font-bold",
+      "h2": "text-3xl sm:text-4xl tracking-tight font-semibold",
+      "h3": "text-2xl font-semibold",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-gray-500",
+      "micro": "text-xs font-semibold tracking-wider uppercase"
+    }
+  },
+  "logo_guidelines": {
+    "asset_path": "/frontend/src/assets/editcol-logo.png",
+    "usage_rules": "The provided EditCol logo is white with a gradient 'O'. Because the app background is light (#FFFFFF / #F8FAFC), the logo MUST NOT be placed directly on the light background. It must be housed inside a dark container. Examples: 1) A dark navbar (bg-[#0A0A0A]), 2) A dark footer, 3) If placed on a white page, put the logo inside a pill or rounded rectangle with bg-gray-900. NEVER modify the logo's typography or colors."
+  },
+  "ui_components": {
+    "buttons": {
+      "primary": "bg-gradient-to-r from-[#39FF14] to-[#DFFF00] text-gray-900 font-bold hover:brightness-110 shadow-[0_0_15px_rgba(57,255,20,0.3)] transition-all rounded-full px-6 py-3",
+      "secondary": "bg-gray-900 text-white font-medium hover:bg-gray-800 rounded-full px-6 py-3 transition-colors",
+      "outline": "bg-white border border-gray-200 text-gray-900 hover:bg-gray-50 rounded-full px-6 py-3 transition-colors",
+      "ghost": "text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full px-4 py-2 transition-colors"
+    },
+    "cards": {
+      "default": "bg-white border border-gray-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden",
+      "interactive": "bg-white border border-gray-200 rounded-2xl cursor-pointer hover:border-[#39FF14] hover:shadow-[0_8px_30px_rgba(57,255,20,0.1)] transition-all",
+      "dark_metric": "bg-[#0A0A0A] border border-gray-800 rounded-2xl text-white p-6"
+    },
+    "inputs": {
+      "default": "bg-white border border-gray-200 rounded-xl px-4 py-3 text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#39FF14] focus:ring-1 focus:ring-[#39FF14] transition-all",
+      "label": "block text-sm font-medium text-gray-700 mb-1.5"
+    },
+    "badges": {
+      "verified": "inline-flex items-center gap-1.5 bg-gray-900 text-white text-xs font-semibold px-2.5 py-1 rounded-full border border-gray-800 (Use neon gradient for the checkmark icon)",
+      "pro": "inline-flex items-center gap-1.5 bg-gradient-to-r from-[#39FF14] to-[#DFFF00] text-gray-900 text-xs font-bold px-2.5 py-1 rounded-full shadow-sm",
+      "top_rated": "inline-flex items-center gap-1.5 bg-amber-100 text-amber-900 text-xs font-semibold px-2.5 py-1 rounded-full",
+      "elite": "inline-flex items-center gap-1.5 bg-[#0A0A0A] text-white text-xs font-bold px-3 py-1 rounded-full border border-[#39FF14] shadow-[0_0_10px_rgba(57,255,20,0.2)]"
+    }
+  },
+  "spacing_and_layout": {
+    "containers": "max-w-7xl mx-auto px-6 sm:px-8 lg:px-12",
+    "section_padding": "py-16 md:py-24",
+    "grid_gaps": "gap-6 md:gap-8",
+    "border_radius": "rounded-2xl for large cards, rounded-xl for inputs, rounded-full for buttons and pills."
+  },
+  "pages_blueprint": {
+    "landing": {
+      "nav": "Dark navbar (bg-[#0A0A0A]) to contrast the white logo, sticky with backdrop-blur. Links in white, primary CTA in neon gradient.",
+      "hero": "Stark white background. Massive Outfit typography (H1). Subtle gray grid pattern overlay. Trust markers (e.g., 'Trusted by 10k+ creators'). Search bar front and center.",
+      "featured_editors": "Bento grid of editor cards. Each card has a video thumbnail (image), editor avatar, name, badges, and starting price."
+    },
+    "browse_editors": {
+      "layout": "2-column layout. Left sidebar (25%) for deep filters (Skills, Software, Badges, Price, Delivery Time). Right side (75%) for grid of editor cards.",
+      "cards": "Image heavy. Hovering on a card should reveal a 'Play' icon or subtle zoom to imply video."
+    },
+    "editor_profile": {
+      "layout": "Left column (30%): Sticky profile card, avatar, badges, 'Message Editor' and 'Hire For Project' buttons (Neon), response rate, trust score panel. Right column (70%): Video portfolio bento grid, About section, detailed Reviews with verified purchase tags."
+    },
+    "auth": {
+      "layout": "Split screen. Left side: dark background with abstract 3D video editing shapes or high-quality studio image. Right side: stark white form container. Email + Phone OTP flow with neon gradient progress bar."
+    },
+    "dashboards": {
+      "layout": "Sidebar navigation (dark bg-[#0A0A0A] to hold logo). Main content area off-white (#F8FAFC).",
+      "components": "Metric cards with clean data charts. Tables for projects and messages. Use the neon gradient for status indicators (e.g., 'In Progress')."
+    },
+    "chat": {
+      "layout": "Full height. Left pane: recent conversations. Right pane: active chat. Bubbles should be gray-100 (received) and gray-900 (sent). Use neon gradient for 'Send' button or active typing indicator.",
+      "features": "Attachment buttons for video files, read receipts (small checkmarks)."
+    },
+    "project_request_form": {
+      "layout": "Multi-step wizard. Neon gradient progress bar at the top. Large, clear inputs for project scope, budget, and references."
+    },
+    "admin": {
+      "layout": "Dense, high-contrast data tables. Red accents for scam/report flags. Dedicated queues for profile verification (approving Pro/Elite badges)."
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Stroke width 2, clean, unstyled unless indicating active state (use neon gradient stroke for active)."
+  },
+  "testing": {
+    "requirements": "All interactive and key informational elements MUST include a data-testid attribute (e.g., data-testid='hire-editor-button')."
+  },
+  "media": {
+    "images": [
+      {
+        "url": "https://images.pexels.com/photos/11025649/pexels-photo-11025649.jpeg",
+        "category": "hero_background",
+        "description": "Cozy workspace featuring a computer setup for video editing, perfect for creative hero sections."
+      },
+      {
+        "url": "https://images.unsplash.com/photo-1574717025058-2f8737d2e2b7",
+        "category": "portfolio_thumbnail",
+        "description": "Black laptop running professional video editing software. Good for editor portfolio mockups."
+      },
+      {
+        "url": "https://images.pexels.com/photos/6476257/pexels-photo-6476257.jpeg",
+        "category": "about_agency",
+        "description": "Creative agency team collaborating. Good for 'About Us' or 'Pro Teams' section."
+      }
+    ]
+  }
+}
