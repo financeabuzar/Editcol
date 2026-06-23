@@ -259,6 +259,28 @@ async def login(body: LoginIn, request: Request, response: Response):
     set_auth_cookies(response, access, refresh, body.remember_me)
     return {"user": public_user(user)}
 
+@api.post("/auth/upgrade-to-editor")
+async def upgrade_to_editor(user=Depends(get_current_user)):
+    """Allow an already-logged-in client to become an editor without re-signup."""
+    if user["role"] == "editor":
+        return {"ok": True, "already_editor": True}
+    if user["role"] == "admin":
+        raise HTTPException(400, "Admins cannot be downgraded to editor")
+    await db.users.update_one({"id": user["id"]}, {"$set": {"role": "editor"}})
+    existing = await db.editors.find_one({"user_id": user["id"]})
+    if not existing:
+        await db.editors.insert_one({
+            "id": user["id"], "user_id": user["id"], "bio": "", "skills": [], "portfolio": [],
+            "hourly_rate": None, "starting_price": None, "location": None,
+            "languages": [], "software": [], "avatar": user.get("avatar"),
+            "is_public": False, "badges": [],
+            "trust_score": {"completion_rate": 0, "response_rate": 0,
+                            "on_time_delivery_rate": 0, "satisfaction": 0},
+            "stats": {"projects_completed": 0, "total_reviews": 0, "avg_rating": 0},
+            "created_at": now_utc().isoformat(),
+        })
+    return {"ok": True}
+
 @api.post("/auth/ws-token")
 async def ws_token(user=Depends(get_current_user)):
     """Issue a short-lived token for WebSocket auth (frontend can't read httpOnly cookies)."""
@@ -756,6 +778,245 @@ async def admin_delete_review(rid: str, user=Depends(require_admin)):
     await recompute_trust(r["editor_id"])
     return {"ok": True}
 
+# ------------------------------- Applications + Public projects ---------
+class PublicProjectIn(BaseModel):
+    title: str
+    description: str
+    content_type: str
+    editing_style: str
+    motion_graphics: bool
+    footage_size: str
+    budget: float
+    deadline: str
+
+class ApplyIn(BaseModel):
+    project_id: str
+    proposal: str
+    proposed_budget: Optional[float] = None
+    proposed_deadline: Optional[str] = None
+
+@api.post("/projects/public")
+async def create_public_project(body: PublicProjectIn, user=Depends(get_current_user)):
+    """Client posts a project openly. Editors can then apply."""
+    if user["role"] != "client":
+        raise HTTPException(403, "Only clients can post projects")
+    proj = {
+        "id": str(uuid.uuid4()), "client_id": user["id"], "editor_id": None,
+        "title": body.title, "description": body.description,
+        "content_type": body.content_type, "editing_style": body.editing_style,
+        "motion_graphics": body.motion_graphics, "footage_size": body.footage_size,
+        "budget": body.budget, "deadline": body.deadline,
+        "status": "open", "created_at": now_utc().isoformat(),
+        "public": True, "applications_count": 0,
+    }
+    await db.projects.insert_one(proj.copy())
+    proj.pop("_id", None)
+    return proj
+
+@api.get("/projects/public")
+async def list_public_projects(user=Depends(get_current_user)):
+    """Editors browse open projects."""
+    if user["role"] != "editor":
+        raise HTTPException(403, "Editor role required")
+    projs = await db.projects.find({"public": True, "status": "open"}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    # Mark which ones this editor already applied to
+    applied = {a["project_id"] async for a in db.applications.find({"editor_id": user["id"]}, {"project_id": 1, "_id": 0})}
+    for p in projs: p["already_applied"] = p["id"] in applied
+    return projs
+
+@api.post("/applications")
+async def apply_to_project(body: ApplyIn, user=Depends(get_current_user)):
+    if user["role"] != "editor":
+        raise HTTPException(403, "Editor role required")
+    proj = await db.projects.find_one({"id": body.project_id})
+    if not proj or proj.get("status") != "open":
+        raise HTTPException(404, "Project not available")
+    existing = await db.applications.find_one({"project_id": body.project_id, "editor_id": user["id"]})
+    if existing:
+        raise HTTPException(400, "Already applied")
+    app_doc = {
+        "id": str(uuid.uuid4()), "project_id": body.project_id,
+        "editor_id": user["id"], "editor_name": user["name"],
+        "client_id": proj["client_id"], "proposal": body.proposal,
+        "proposed_budget": body.proposed_budget, "proposed_deadline": body.proposed_deadline,
+        "status": "pending", "created_at": now_utc().isoformat(),
+    }
+    await db.applications.insert_one(app_doc.copy())
+    await db.projects.update_one({"id": body.project_id}, {"$inc": {"applications_count": 1}})
+    app_doc.pop("_id", None)
+    return app_doc
+
+@api.get("/applications/project/{project_id}")
+async def list_applications_for_project(project_id: str, user=Depends(get_current_user)):
+    proj = await db.projects.find_one({"id": project_id})
+    if not proj: raise HTTPException(404, "Project not found")
+    if user["id"] != proj["client_id"] and user["role"] != "admin":
+        raise HTTPException(403, "Only the project owner can view applications")
+    apps = await db.applications.find({"project_id": project_id}, {"_id": 0}).sort("created_at", 1).to_list(500)
+    # Enrich with editor profile
+    editor_ids = [a["editor_id"] for a in apps]
+    editors = {e["id"]: e async for e in db.editors.find({"id": {"$in": editor_ids}}, {"_id": 0})}
+    for a in apps:
+        e = editors.get(a["editor_id"]) or {}
+        a["editor_profile"] = {
+            "avatar": e.get("avatar"), "bio": e.get("bio"), "badges": e.get("badges", []),
+            "starting_price": e.get("starting_price"), "skills": e.get("skills", []),
+            "trust_score": e.get("trust_score", {}),
+        }
+    return apps
+
+@api.get("/applications/mine")
+async def list_my_applications(user=Depends(get_current_user)):
+    if user["role"] != "editor":
+        raise HTTPException(403, "Editor role required")
+    apps = await db.applications.find({"editor_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    project_ids = [a["project_id"] for a in apps]
+    projs = {p["id"]: p async for p in db.projects.find({"id": {"$in": project_ids}}, {"_id": 0})}
+    for a in apps: a["project"] = projs.get(a["project_id"])
+    return apps
+
+@api.post("/applications/{app_id}/accept")
+async def accept_application(app_id: str, user=Depends(get_current_user)):
+    """Client accepts → auto-create workspace: assign editor to project, open conversation, send system message."""
+    app_doc = await db.applications.find_one({"id": app_id})
+    if not app_doc: raise HTTPException(404, "Application not found")
+    if app_doc["client_id"] != user["id"]:
+        raise HTTPException(403, "Only the client can accept")
+    if app_doc["status"] != "pending":
+        raise HTTPException(400, f"Application already {app_doc['status']}")
+    proj = await db.projects.find_one({"id": app_doc["project_id"]})
+    if not proj or proj.get("status") != "open":
+        raise HTTPException(400, "Project no longer open")
+
+    # 1) Mark this app accepted, decline others on same project
+    await db.applications.update_one({"id": app_id},
+        {"$set": {"status": "accepted", "accepted_at": now_utc().isoformat()}})
+    await db.applications.update_many(
+        {"project_id": app_doc["project_id"], "id": {"$ne": app_id}, "status": "pending"},
+        {"$set": {"status": "declined", "auto_declined": True}})
+
+    # 2) Assign editor and move project to in_progress
+    await db.projects.update_one({"id": app_doc["project_id"]},
+        {"$set": {"editor_id": app_doc["editor_id"], "status": "in_progress",
+                  "accepted_at": now_utc().isoformat()}})
+
+    # 3) Open conversation between client + editor
+    conv = await get_or_create_conversation(app_doc["client_id"], app_doc["editor_id"])
+
+    # 4) System message
+    sys_msg = {
+        "id": str(uuid.uuid4()), "conversation_id": conv["id"],
+        "sender_id": app_doc["client_id"],
+        "text": f"🎬 Project '{proj['title']}' has started. Welcome to your private workspace.",
+        "attachment_b64": None, "attachment_type": None, "attachment_name": None,
+        "created_at": now_utc().isoformat(), "read": False,
+        "system": True, "project_id": proj["id"],
+    }
+    await db.messages.insert_one(sys_msg.copy())
+    await db.conversations.update_one({"id": conv["id"]},
+        {"$set": {"last_message": sys_msg["text"], "last_message_at": sys_msg["created_at"],
+                  "project_id": proj["id"]}})
+    sys_msg.pop("_id", None)
+    await manager.broadcast_conversation(conv["id"], {"event": "message", "data": sys_msg})
+
+    return {"ok": True, "project_id": proj["id"], "conversation_id": conv["id"]}
+
+@api.post("/applications/{app_id}/decline")
+async def decline_application(app_id: str, user=Depends(get_current_user)):
+    app_doc = await db.applications.find_one({"id": app_id})
+    if not app_doc: raise HTTPException(404, "Application not found")
+    if app_doc["client_id"] != user["id"]:
+        raise HTTPException(403, "Only the client can decline")
+    await db.applications.update_one({"id": app_id}, {"$set": {"status": "declined"}})
+    return {"ok": True}
+
+# ------------------------------- AI Match -----------------------------
+class AIMatchIn(BaseModel):
+    content_type: str
+    budget: float
+    deadline: str
+    editing_style: str
+    motion_graphics: bool
+    footage_size: str
+
+@api.post("/ai/match")
+async def ai_match(body: AIMatchIn, user=Depends(get_current_user)):
+    """Use Claude Sonnet to rank public editors based on project criteria."""
+    editors = await db.editors.find({"is_public": True}, {"_id": 0}).to_list(200)
+    if not editors:
+        return {"matches": [], "note": "No public editors available yet."}
+
+    # Join names
+    user_ids = [e["user_id"] for e in editors]
+    users = {u["id"]: u async for u in db.users.find({"id": {"$in": user_ids}}, {"_id": 0})}
+    editor_summaries = []
+    for e in editors:
+        u = users.get(e["user_id"]) or {}
+        editor_summaries.append({
+            "id": e["id"], "name": u.get("name"),
+            "bio": (e.get("bio") or "")[:300],
+            "skills": e.get("skills", []), "software": e.get("software", []),
+            "badges": e.get("badges", []), "starting_price": e.get("starting_price"),
+            "trust_score": e.get("trust_score", {}),
+            "stats": e.get("stats", {}),
+        })
+
+    try:
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        llm_key = os.environ["EMERGENT_LLM_KEY"]
+        system = (
+            "You are EditCol's AI matchmaker. You receive project criteria and a list of editor profiles. "
+            "Rank up to 6 best matches. Respond with STRICT JSON only: "
+            '{"matches":[{"editor_id":"<id>","score":<0-100>,"reason":"<one short sentence>"}]}. '
+            "Consider: relevance of skills + style + content type, badges (verified/pro/top_rated/elite carry weight), "
+            "starting price vs budget, trust score, motion graphics requirement, and turnaround feasibility for the deadline. "
+            "Do not include editors who clearly cannot meet the budget or skill needs."
+        )
+        chat = LlmChat(
+            api_key=llm_key, session_id=f"match-{user['id']}-{uuid.uuid4().hex[:6]}",
+            system_message=system,
+        ).with_model("anthropic", "claude-sonnet-4-6")
+        prompt = json.dumps({
+            "criteria": body.model_dump(),
+            "editors": editor_summaries,
+        }, default=str)
+        resp = await chat.send_message(UserMessage(text=prompt))
+        raw = str(resp).strip()
+        # extract JSON
+        start = raw.find("{"); end = raw.rfind("}")
+        if start == -1 or end == -1: raise ValueError("No JSON in response")
+        parsed = json.loads(raw[start:end+1])
+        match_list = parsed.get("matches", [])
+    except Exception as ex:
+        log.warning(f"AI match fallback (LLM error: {ex})")
+        # Fallback: deterministic ranking
+        match_list = []
+        for e in editor_summaries[:6]:
+            score = 50
+            if e["starting_price"] and e["starting_price"] <= body.budget: score += 15
+            score += min(20, 5 * len(set(e["skills"]) & {body.content_type, body.editing_style}))
+            for b in e["badges"]: score += {"verified": 5, "pro": 8, "top_rated": 12, "elite": 18}.get(b, 0)
+            match_list.append({"editor_id": e["id"], "score": min(100, score),
+                              "reason": f"{', '.join(e['badges']) or 'Verified profile'} · within budget"})
+        match_list.sort(key=lambda x: -x["score"])
+
+    # Enrich with full editor cards
+    by_id = {e["id"]: e for e in editor_summaries}
+    full = []
+    for m in match_list[:6]:
+        e = by_id.get(m["editor_id"])
+        if not e: continue
+        editor_doc = next((x for x in editors if x["id"] == e["id"]), None)
+        full.append({
+            "id": e["id"], "name": e["name"],
+            "avatar": (editor_doc or {}).get("avatar"),
+            "bio": e["bio"], "skills": e["skills"],
+            "badges": e["badges"], "starting_price": e["starting_price"],
+            "trust_score": e["trust_score"], "stats": e["stats"],
+            "score": m.get("score", 0), "reason": m.get("reason", ""),
+        })
+    return {"matches": full}
+
 # ------------------------------- Root -----------------------------------
 @api.get("/")
 async def root():
@@ -790,6 +1051,8 @@ async def startup():
     await db.projects.create_index("editor_id")
     await db.reports.create_index("status")
     await db.reviews.create_index("editor_id")
+    await db.applications.create_index("project_id")
+    await db.applications.create_index("editor_id")
 
     # Idempotent admin seed
     email = os.environ["ADMIN_EMAIL"].lower()

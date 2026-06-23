@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import TrustBadges from "@/components/TrustBadges";
@@ -8,10 +8,11 @@ import { MessageSquare, Briefcase, MapPin, Star, Flag, ShieldAlert, UserX, X, Lo
 export default function EditorProfile() {
   const { id } = useParams();
   const nav = useNavigate();
+  const loc = useLocation();
   const { user } = useAuth();
   const [editor, setEditor] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showHire, setShowHire] = useState(false);
+  const [showHire, setShowHire] = useState(loc.state?.open === "hire");
   const [showReport, setShowReport] = useState(false);
 
   const load = async () => {

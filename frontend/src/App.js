@@ -17,7 +17,11 @@ import EditorOnboarding from "@/pages/EditorOnboarding";
 import Messages from "@/pages/Messages";
 import Admin from "@/pages/Admin";
 import LegalPage from "@/pages/Legal";
-import { HowItWorks, TrustSafety } from "@/pages/Static";
+import HowItWorks from "@/pages/HowItWorks";
+import TrustSafety from "@/pages/TrustSafety";
+import SuccessStories from "@/pages/SuccessStories";
+import AIMatch from "@/pages/AIMatch";
+import BecomeEditor from "@/pages/BecomeEditor";
 
 const HIDE_CHROME = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -44,6 +48,8 @@ export default function App() {
             <Route path="/editor/:id" element={<EditorProfile/>} />
             <Route path="/how-it-works" element={<HowItWorks/>} />
             <Route path="/trust" element={<TrustSafety/>} />
+            <Route path="/success-stories" element={<SuccessStories/>} />
+            <Route path="/ai-match" element={<AIMatch/>} />
             <Route path="/legal/:slug" element={<LegalPage/>} />
 
             <Route path="/login" element={<Login/>} />
@@ -51,6 +57,7 @@ export default function App() {
             <Route path="/forgot-password" element={<ForgotPassword/>} />
             <Route path="/reset-password" element={<ResetPassword/>} />
 
+            <Route path="/become-editor" element={<ProtectedRoute><BecomeEditor/></ProtectedRoute>} />
             <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
             <Route path="/editor/onboarding" element={<ProtectedRoute role="editor"><EditorOnboarding/></ProtectedRoute>} />
             <Route path="/messages" element={<ProtectedRoute><Messages/></ProtectedRoute>} />

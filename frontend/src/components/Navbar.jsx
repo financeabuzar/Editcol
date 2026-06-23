@@ -12,7 +12,9 @@ export default function Navbar() {
   const links = [
     { to: "/browse", label: "Browse Editors" },
     { to: "/how-it-works", label: "How It Works" },
+    { to: "/ai-match", label: "AI Match" },
     { to: "/trust", label: "Trust & Safety" },
+    { to: "/success-stories", label: "Success Stories" },
   ];
 
   const onLogout = async () => { await logout(); nav("/"); };
