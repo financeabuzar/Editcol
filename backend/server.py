@@ -621,7 +621,9 @@ async def recompute_trust(editor_id: str):
         "on_time_delivery_rate": int((on_time / completed) * 100) if completed else 0,
         "satisfaction": int(avg * 20),
     }
-    badges = ["verified"]
+    # Preserve verified badge only if editor was already eligible (controlled by PUT /editors/me)
+    existing = await db.editors.find_one({"id": editor_id}) or {}
+    badges = ["verified"] if "verified" in (existing.get("badges") or []) else []
     if completed >= 5: badges.append("pro")
     if avg >= 4.7 and len(reviews) >= 5: badges.append("top_rated")
     if completed >= 20 and avg >= 4.8: badges.append("elite")
