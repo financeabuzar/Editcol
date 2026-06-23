@@ -12,7 +12,14 @@ module.exports = {
         md: 'calc(var(--radius) - 2px)',
         sm: 'calc(var(--radius) - 4px)'
       },
+      fontFamily: {
+        heading: ['Outfit', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'sans-serif'],
+        mono: ['JetBrains Mono', 'monospace'],
+      },
       colors: {
+        neon: { from: '#39FF14', to: '#DFFF00' },
+        ink: '#0A0A0A',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         card: {

@@ -1,56 +1,63 @@
-import { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { AuthProvider } from "@/context/AuthContext";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import Home from "@/pages/Home";
+import BrowseEditors from "@/pages/BrowseEditors";
+import EditorProfile from "@/pages/EditorProfile";
+import Login from "@/pages/Login";
+import Register from "@/pages/Register";
+import ForgotPassword from "@/pages/ForgotPassword";
+import ResetPassword from "@/pages/ResetPassword";
+import Dashboard from "@/pages/Dashboard";
+import EditorOnboarding from "@/pages/EditorOnboarding";
+import Messages from "@/pages/Messages";
+import Admin from "@/pages/Admin";
+import LegalPage from "@/pages/Legal";
+import { HowItWorks, TrustSafety } from "@/pages/Static";
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+const HIDE_CHROME = ["/login", "/register", "/forgot-password", "/reset-password"];
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
-
-function App() {
+function Shell({ children }) {
+  const loc = useLocation();
+  const hide = HIDE_CHROME.some(p => loc.pathname.startsWith(p));
   return (
     <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
+      {!hide && <Navbar/>}
+      <main className="flex-1">{children}</main>
+      {!hide && <Footer/>}
     </div>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Shell>
+          <Routes>
+            <Route path="/" element={<Home/>} />
+            <Route path="/browse" element={<BrowseEditors/>} />
+            <Route path="/editor/:id" element={<EditorProfile/>} />
+            <Route path="/how-it-works" element={<HowItWorks/>} />
+            <Route path="/trust" element={<TrustSafety/>} />
+            <Route path="/legal/:slug" element={<LegalPage/>} />
+
+            <Route path="/login" element={<Login/>} />
+            <Route path="/register" element={<Register/>} />
+            <Route path="/forgot-password" element={<ForgotPassword/>} />
+            <Route path="/reset-password" element={<ResetPassword/>} />
+
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
+            <Route path="/editor/onboarding" element={<ProtectedRoute role="editor"><EditorOnboarding/></ProtectedRoute>} />
+            <Route path="/messages" element={<ProtectedRoute><Messages/></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute role="admin"><Admin/></ProtectedRoute>} />
+          </Routes>
+        </Shell>
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
