@@ -1,7 +1,7 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ArrowRight, Sparkles, ShieldCheck, Star, Zap, CheckCircle2, Crown, Award, Wand2 } from "lucide-react";
+import { ArrowRight, Sparkles, ShieldCheck, Star, Zap, CheckCircle2, Crown, Award, Wand2, ChevronDown } from "lucide-react";
 import api from "@/lib/api";
 import TrustBadges from "@/components/TrustBadges";
 import TiltCard from "@/components/TiltCard";
@@ -17,7 +17,7 @@ export default function Home() {
   const { mx, my } = useMousePosition();
   const heroTx = useTranslate(mx, 14);
   const heroTy = useTranslate(my, 10);
-  const [openFaqIndex, setOpenFaqIndex] = useState(0);
+  const [openFaqIndexes, setOpenFaqIndexes] = useState([0]);
 
   useEffect(() => {
     api.get("/editors").then(r => setEditors(r.data.slice(0, 6))).catch(() => {});
@@ -34,6 +34,14 @@ export default function Home() {
     if (user.role === "editor") return nav("/editor/onboarding");
     if (user.role === "admin") return nav("/admin");
     return nav("/become-editor");
+  };
+
+  const toggleFaq = (index) => {
+    setOpenFaqIndexes((current) =>
+      current.includes(index)
+        ? current.filter((item) => item !== index)
+        : [...current, index]
+    );
   };
 
   return (
@@ -205,33 +213,45 @@ export default function Home() {
         <h2 id="faq-title" className="font-heading text-3xl sm:text-4xl font-semibold mt-2 text-gray-900">
           Hiring a video editor on EditCol
         </h2>
-        <div className="mt-10 grid lg:grid-cols-2 gap-4">
+        <div className="mt-10 max-w-4xl space-y-3">
           {FAQ_ITEMS.map((item, index) => (
             <article key={item.question} className="card overflow-hidden">
               <h3 className="font-heading text-lg font-semibold text-gray-900">
                 <button
                   type="button"
                   id={`faq-button-${index}`}
-                  aria-expanded={openFaqIndex === index}
+                  aria-expanded={openFaqIndexes.includes(index)}
                   aria-controls={`faq-panel-${index}`}
                   className="w-full flex items-start justify-between gap-4 p-4 sm:p-6 text-left hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#39FF14] focus-visible:ring-offset-2"
-                  onClick={() => setOpenFaqIndex(openFaqIndex === index ? -1 : index)}
+                  onClick={() => toggleFaq(index)}
                 >
-                  <span>{item.question}</span>
-                  <span aria-hidden="true" className="text-2xl leading-none text-gray-400">
-                    {openFaqIndex === index ? "-" : "+"}
-                  </span>
+                  <span className="min-w-0 pr-2">{item.question}</span>
+                  <ChevronDown
+                    size={20}
+                    aria-hidden="true"
+                    className={`mt-0.5 shrink-0 text-gray-400 transition-transform duration-200 ${
+                      openFaqIndexes.includes(index) ? "rotate-180 text-gray-900" : ""
+                    }`}
+                  />
                 </button>
               </h3>
-              <div
+              <motion.div
                 id={`faq-panel-${index}`}
                 role="region"
                 aria-labelledby={`faq-button-${index}`}
-                hidden={openFaqIndex !== index}
-                className="px-4 sm:px-6 pb-5 sm:pb-6"
+                initial={false}
+                animate={openFaqIndexes.includes(index) ? "open" : "closed"}
+                variants={{
+                  open: { height: "auto", opacity: 1 },
+                  closed: { height: 0, opacity: 0 },
+                }}
+                transition={{ duration: 0.22, ease: "easeOut" }}
+                className="overflow-hidden"
               >
-                <p className="text-sm text-gray-600 leading-relaxed">{item.answer}</p>
-              </div>
+                <div className="px-4 sm:px-6 pb-5 sm:pb-6">
+                  <p className="text-sm text-gray-600 leading-relaxed">{item.answer}</p>
+                </div>
+              </motion.div>
             </article>
           ))}
         </div>
