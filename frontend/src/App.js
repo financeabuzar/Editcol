@@ -1,11 +1,12 @@
 import "@/App.css";
 import { useEffect } from "react";
-import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { applyTheme, getInitialTheme } from "@/components/ThemeToggle";
+import AppErrorBoundary from "@/components/AppErrorBoundary";
 
 import Home from "@/pages/Home";
 import BrowseEditors from "@/pages/BrowseEditors";
@@ -24,6 +25,7 @@ import TrustSafety from "@/pages/TrustSafety";
 import SuccessStories from "@/pages/SuccessStories";
 import AIMatch from "@/pages/AIMatch";
 import BecomeEditor from "@/pages/BecomeEditor";
+import ErrorPage from "@/pages/ErrorPage";
 
 const HIDE_CHROME = ["/login", "/register", "/forgot-password", "/reset-password"];
 
@@ -52,28 +54,33 @@ export default function App() {
     <AuthProvider>
       <BrowserRouter>
         <Shell>
-          <Routes>
-            <Route path="/" element={<Home/>} />
-            <Route path="/browse" element={<PrivatePage><BrowseEditors/></PrivatePage>} />
-            <Route path="/editor/:id" element={<PrivatePage><EditorProfile/></PrivatePage>} />
-            <Route path="/how-it-works" element={<PrivatePage><HowItWorks/></PrivatePage>} />
-            <Route path="/trust" element={<PrivatePage><TrustSafety/></PrivatePage>} />
-            <Route path="/success-stories" element={<PrivatePage><SuccessStories/></PrivatePage>} />
-            <Route path="/ai-match" element={<PrivatePage><AIMatch/></PrivatePage>} />
-            <Route path="/legal/:slug" element={<PrivatePage><LegalPage/></PrivatePage>} />
+          <AppErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Home/>} />
+              <Route path="/browse" element={<PrivatePage><BrowseEditors/></PrivatePage>} />
+              <Route path="/editor/:id" element={<PrivatePage><EditorProfile/></PrivatePage>} />
+              <Route path="/how-it-works" element={<PrivatePage><HowItWorks/></PrivatePage>} />
+              <Route path="/trust" element={<PrivatePage><TrustSafety/></PrivatePage>} />
+              <Route path="/success-stories" element={<PrivatePage><SuccessStories/></PrivatePage>} />
+              <Route path="/ai-match" element={<PrivatePage><AIMatch/></PrivatePage>} />
+              <Route path="/legal/:slug" element={<PrivatePage><LegalPage/></PrivatePage>} />
 
-            <Route path="/login" element={<Login/>} />
-            <Route path="/register" element={<Register/>} />
-            <Route path="/forgot-password" element={<ForgotPassword/>} />
-            <Route path="/reset-password" element={<ResetPassword/>} />
+              <Route path="/login" element={<Login/>} />
+              <Route path="/register" element={<Register/>} />
+              <Route path="/forgot-password" element={<ForgotPassword/>} />
+              <Route path="/reset-password" element={<ResetPassword/>} />
 
-            <Route path="/become-editor" element={<PrivatePage><BecomeEditor/></PrivatePage>} />
-            <Route path="/dashboard" element={<PrivatePage><Dashboard/></PrivatePage>} />
-            <Route path="/editor/onboarding" element={<PrivatePage role="editor"><EditorOnboarding/></PrivatePage>} />
-            <Route path="/messages" element={<PrivatePage><Messages/></PrivatePage>} />
-            <Route path="/admin" element={<PrivatePage role="admin"><Admin/></PrivatePage>} />
-            <Route path="*" element={<PrivatePage><Navigate to="/dashboard" replace /></PrivatePage>} />
-          </Routes>
+              <Route path="/become-editor" element={<PrivatePage><BecomeEditor/></PrivatePage>} />
+              <Route path="/dashboard" element={<PrivatePage><Dashboard/></PrivatePage>} />
+              <Route path="/editor/onboarding" element={<PrivatePage role="editor"><EditorOnboarding/></PrivatePage>} />
+              <Route path="/messages" element={<PrivatePage><Messages/></PrivatePage>} />
+              <Route path="/admin" element={<PrivatePage role="admin"><Admin/></PrivatePage>} />
+              <Route path="/403" element={<ErrorPage code={403} />} />
+              <Route path="/404" element={<ErrorPage code={404} />} />
+              <Route path="/500" element={<ErrorPage code={500} />} />
+              <Route path="*" element={<ErrorPage code={404} />} />
+            </Routes>
+          </AppErrorBoundary>
         </Shell>
       </BrowserRouter>
     </AuthProvider>
