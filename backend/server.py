@@ -29,6 +29,9 @@ ACCESS_TTL_MIN = 60 * 24            # 1 day default
 REMEMBER_TTL_MIN = 60 * 24 * 30     # 30 days
 REFRESH_TTL_DAYS = 30
 OTP_TTL_MIN = 10
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
+COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax").lower()
+COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
@@ -64,12 +67,12 @@ def decode_token(token: str) -> dict:
 
 def set_auth_cookies(resp: Response, access: str, refresh: str, remember: bool):
     max_age = REMEMBER_TTL_MIN * 60 if remember else ACCESS_TTL_MIN * 60
-    resp.set_cookie("access_token", access, httponly=True, secure=False, samesite="lax", max_age=max_age, path="/")
-    resp.set_cookie("refresh_token", refresh, httponly=True, secure=False, samesite="lax", max_age=REFRESH_TTL_DAYS*86400, path="/")
+    resp.set_cookie("access_token", access, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=max_age, path="/", domain=COOKIE_DOMAIN)
+    resp.set_cookie("refresh_token", refresh, httponly=True, secure=COOKIE_SECURE, samesite=COOKIE_SAMESITE, max_age=REFRESH_TTL_DAYS*86400, path="/", domain=COOKIE_DOMAIN)
 
 def clear_auth_cookies(resp: Response):
-    resp.delete_cookie("access_token", path="/")
-    resp.delete_cookie("refresh_token", path="/")
+    resp.delete_cookie("access_token", path="/", domain=COOKIE_DOMAIN)
+    resp.delete_cookie("refresh_token", path="/", domain=COOKIE_DOMAIN)
 
 def gen_otp() -> str:
     return f"{secrets.randbelow(900000) + 100000}"
@@ -309,8 +312,8 @@ async def refresh_token(request: Request, response: Response):
         if not user:
             raise HTTPException(401, "User not found")
         access = create_token(user["id"], user["role"], ACCESS_TTL_MIN)
-        response.set_cookie("access_token", access, httponly=True, secure=False,
-                            samesite="lax", max_age=ACCESS_TTL_MIN*60, path="/")
+        response.set_cookie("access_token", access, httponly=True, secure=COOKIE_SECURE,
+                            samesite=COOKIE_SAMESITE, max_age=ACCESS_TTL_MIN*60, path="/", domain=COOKIE_DOMAIN)
         return {"ok": True}
     except jwt.InvalidTokenError:
         raise HTTPException(401, "Invalid refresh token")
