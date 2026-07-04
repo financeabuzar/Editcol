@@ -10,11 +10,15 @@ import json
 import secrets
 import logging
 import asyncio
+import base64
+import smtplib
 from datetime import datetime, timezone, timedelta
+from email.message import EmailMessage
 from typing import Optional, List, Literal, Dict, Set
 
 import bcrypt
 import jwt
+import requests
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, WebSocket, WebSocketDisconnect, Query
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -29,6 +33,20 @@ ACCESS_TTL_MIN = 60 * 24            # 1 day default
 REMEMBER_TTL_MIN = 60 * 24 * 30     # 30 days
 REFRESH_TTL_DAYS = 30
 OTP_TTL_MIN = 10
+OTP_DEV_MODE = os.environ.get("OTP_DEV_MODE", "false").lower() == "true"
+LOGIN_OTP_REQUIRED = os.environ.get("LOGIN_OTP_REQUIRED", "true").lower() == "true"
+EMAIL_PROVIDER = os.environ.get("EMAIL_PROVIDER", "smtp").lower()
+EMAIL_FROM = os.environ.get("EMAIL_FROM", "EditCol <no-reply@editcol.com>")
+RESEND_API_KEY = os.environ.get("RESEND_API_KEY")
+SMTP_HOST = os.environ.get("SMTP_HOST")
+SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+SMTP_USER = os.environ.get("SMTP_USER")
+SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
+TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
+TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
 COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax").lower()
 COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
@@ -77,6 +95,145 @@ def clear_auth_cookies(resp: Response):
 def gen_otp() -> str:
     return f"{secrets.randbelow(900000) + 100000}"
 
+def normalize_phone(phone: str) -> str:
+    phone = (phone or "").strip()
+    if phone.startswith("+"):
+        return "+" + "".join(ch for ch in phone[1:] if ch.isdigit())
+    return "".join(ch for ch in phone if ch.isdigit())
+
+def normalize_login_identifier(identifier: str) -> str:
+    identifier = (identifier or "").strip()
+    if "@" in identifier:
+        return identifier.lower()
+    return normalize_phone(identifier)
+
+def _otp_message(code: str, purpose: str) -> str:
+    return f"Your EditCol {purpose} code is {code}. It expires in {OTP_TTL_MIN} minutes."
+
+def _send_email_sync(to_email: str, code: str, purpose: str):
+    subject = f"Your EditCol {purpose} code"
+    text = _otp_message(code, purpose)
+
+    if EMAIL_PROVIDER == "resend":
+        if not RESEND_API_KEY:
+            raise RuntimeError("RESEND_API_KEY is not configured")
+        resp = requests.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
+            json={"from": EMAIL_FROM, "to": [to_email], "subject": subject, "text": text},
+            timeout=15,
+        )
+        if resp.status_code >= 400:
+            raise RuntimeError(f"Resend email failed: {resp.status_code} {resp.text[:200]}")
+        return
+
+    if not SMTP_HOST:
+        raise RuntimeError("SMTP_HOST is not configured")
+
+    msg = EmailMessage()
+    msg["Subject"] = subject
+    msg["From"] = EMAIL_FROM
+    msg["To"] = to_email
+    msg.set_content(text)
+
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+        if SMTP_USE_TLS:
+            smtp.starttls()
+        if SMTP_USER and SMTP_PASSWORD:
+            smtp.login(SMTP_USER, SMTP_PASSWORD)
+        smtp.send_message(msg)
+
+def _send_sms_sync(to_phone: str, code: str, purpose: str):
+    if not (TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN and TWILIO_FROM_NUMBER):
+        raise RuntimeError("Twilio SMS credentials are not configured")
+
+    auth = base64.b64encode(f"{TWILIO_ACCOUNT_SID}:{TWILIO_AUTH_TOKEN}".encode()).decode()
+    resp = requests.post(
+        f"https://api.twilio.com/2010-04-01/Accounts/{TWILIO_ACCOUNT_SID}/Messages.json",
+        headers={"Authorization": f"Basic {auth}"},
+        data={"From": TWILIO_FROM_NUMBER, "To": to_phone, "Body": _otp_message(code, purpose)},
+        timeout=15,
+    )
+    if resp.status_code >= 400:
+        raise RuntimeError(f"Twilio SMS failed: {resp.status_code} {resp.text[:200]}")
+
+async def send_otp(to: str, code: str, otp_type: Literal["email", "phone"], purpose: str):
+    if OTP_DEV_MODE:
+        log.info("[OTP-DEV] %s %s=%s", to, otp_type, code)
+        return
+
+    try:
+        if otp_type == "email":
+            await asyncio.to_thread(_send_email_sync, to, code, purpose)
+        else:
+            await asyncio.to_thread(_send_sms_sync, to, code, purpose)
+    except Exception as exc:
+        log.exception("Failed to send %s OTP to %s", otp_type, to)
+        raise HTTPException(502, f"Could not send {otp_type} OTP. Check OTP provider configuration.") from exc
+
+def with_dev_otp(payload: dict, **codes) -> dict:
+    if OTP_DEV_MODE:
+        payload["otp_dev"] = codes
+    return payload
+
+def _verify_google_token_sync(credential: str) -> dict:
+    if not GOOGLE_CLIENT_ID:
+        raise RuntimeError("GOOGLE_CLIENT_ID is not configured")
+    resp = requests.get(
+        "https://oauth2.googleapis.com/tokeninfo",
+        params={"id_token": credential},
+        timeout=15,
+    )
+    if resp.status_code >= 400:
+        raise HTTPException(401, "Invalid Google credential")
+    payload = resp.json()
+    if payload.get("aud") != GOOGLE_CLIENT_ID:
+        raise HTTPException(401, "Google credential audience mismatch")
+    if payload.get("email_verified") not in (True, "true", "True", "1"):
+        raise HTTPException(401, "Google email is not verified")
+    return payload
+
+async def verify_google_token(credential: str) -> dict:
+    try:
+        return await asyncio.to_thread(_verify_google_token_sync, credential)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        log.exception("Google auth verification failed")
+        raise HTTPException(502, "Could not verify Google account. Check Google auth configuration.") from exc
+
+async def ensure_editor_profile(user: dict):
+    existing = await db.editors.find_one({"user_id": user["id"]})
+    if existing:
+        return
+    await db.editors.insert_one({
+        "id": user["id"],
+        "user_id": user["id"],
+        "bio": "",
+        "skills": [],
+        "portfolio": [],
+        "hourly_rate": None,
+        "starting_price": None,
+        "location": None,
+        "languages": [],
+        "software": [],
+        "avatar": user.get("avatar"),
+        "is_public": False,
+        "badges": [],
+        "trust_score": {
+            "completion_rate": 0,
+            "response_rate": 0,
+            "on_time_delivery_rate": 0,
+            "satisfaction": 0,
+        },
+        "stats": {
+            "projects_completed": 0,
+            "total_reviews": 0,
+            "avg_rating": 0,
+        },
+        "created_at": now_utc().isoformat(),
+    })
+
 def public_user(u: dict) -> dict:
     return {
         "id": u["id"], "email": u["email"], "name": u["name"], "phone": u.get("phone"),
@@ -123,14 +280,24 @@ class RegisterIn(BaseModel):
     role: Literal["client", "editor"]
 
 class LoginIn(BaseModel):
-    email: EmailStr
+    email: str
     password: str
     remember_me: bool = False
+
+class GoogleAuthIn(BaseModel):
+    credential: str
+    role: Literal["client", "editor"] = "client"
+    remember_me: bool = True
 
 class VerifyOtpIn(BaseModel):
     email: EmailStr
     otp: str
     type: Literal["email", "phone"]
+
+class VerifyLoginOtpIn(BaseModel):
+    email: EmailStr
+    otp: str
+    remember_me: bool = False
 
 class ResendOtpIn(BaseModel):
     email: EmailStr
@@ -197,13 +364,14 @@ import traceback
 async def register(body: RegisterIn, response: Response):
     try:
         email = body.email.lower().strip()
+        phone = normalize_phone(body.phone)
 
         print("Incoming body:", body.model_dump())
 
         if await db.users.find_one({"email": email}):
             raise HTTPException(400, "Email already registered")
 
-        if await db.users.find_one({"phone": body.phone}):
+        if await db.users.find_one({"phone": phone}):
             raise HTTPException(400, "Phone already registered")
 
         uid = str(uuid.uuid4())
@@ -212,7 +380,7 @@ async def register(body: RegisterIn, response: Response):
             "id": uid,
             "name": body.name.strip(),
             "email": email,
-            "phone": body.phone,
+            "phone": phone,
             "password_hash": hash_password(body.password),
             "role": body.role,
             "email_verified": False,
@@ -282,22 +450,14 @@ async def register(body: RegisterIn, response: Response):
             },
         ])
 
-        print("Generating tokens...")
-
-        access = create_token(uid, body.role, ACCESS_TTL_MIN)
-        refresh = create_token(uid, body.role, REFRESH_TTL_DAYS * 1440, "refresh")
-
-        set_auth_cookies(response, access, refresh, False)
+        await send_otp(email, email_otp, "email", "verification")
+        await send_otp(phone, phone_otp, "phone", "verification")
 
         print("Register Success")
 
-        return {
+        return with_dev_otp({
             "user": public_user(user),
-            "otp_dev": {
-                "email_otp": email_otp,
-                "phone_otp": phone_otp,
-            },
-        }
+        }, email_otp=email_otp, phone_otp=phone_otp)
 
     except Exception as e:
         print("=" * 60)
@@ -310,15 +470,16 @@ async def register(body: RegisterIn, response: Response):
 
 @api.post("/auth/login")
 async def login(body: LoginIn, request: Request, response: Response):
-    email = body.email.lower().strip()
+    login_identifier = normalize_login_identifier(body.email)
     ip = request.client.host if request.client else "unknown"
-    identifier = f"{ip}:{email}"
+    identifier = f"{ip}:{login_identifier}"
 
     attempts = await db.login_attempts.find_one({"identifier": identifier})
     if attempts and attempts.get("locked_until") and datetime.fromisoformat(attempts["locked_until"]) > now_utc():
         raise HTTPException(429, "Too many attempts. Try again later.")
 
-    user = await db.users.find_one({"email": email})
+    user_query = {"email": login_identifier} if "@" in login_identifier else {"phone": login_identifier}
+    user = await db.users.find_one(user_query)
     if not user or not verify_password(body.password, user["password_hash"]):
         new_count = (attempts or {}).get("count", 0) + 1
         update = {"identifier": identifier, "count": new_count, "last_attempt": now_utc().isoformat()}
@@ -331,11 +492,114 @@ async def login(body: LoginIn, request: Request, response: Response):
         raise HTTPException(403, "Account banned")
 
     await db.login_attempts.delete_one({"identifier": identifier})
+    if LOGIN_OTP_REQUIRED and user["role"] != "admin":
+        account_email = user["email"]
+        await db.otp_codes.update_many({"email": account_email, "type": "login", "used": False},
+                                       {"$set": {"used": True}})
+        code = gen_otp()
+        expires = (now_utc() + timedelta(minutes=OTP_TTL_MIN)).isoformat()
+        await db.otp_codes.insert_one({"user_id": user["id"], "email": account_email, "type": "login",
+                                       "code": code, "expires_at": expires, "used": False})
+        await send_otp(account_email, code, "email", "login")
+        return with_dev_otp({"login_otp_required": True, "email": account_email}, login_otp=code)
+
     ttl = REMEMBER_TTL_MIN if body.remember_me else ACCESS_TTL_MIN
     access = create_token(user["id"], user["role"], ttl)
     refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS*1440, "refresh")
     set_auth_cookies(response, access, refresh, body.remember_me)
     return {"user": public_user(user)}
+
+@api.post("/auth/google")
+async def google_auth(body: GoogleAuthIn, response: Response):
+    google_user = await verify_google_token(body.credential)
+    email = google_user["email"].lower().strip()
+    google_sub = google_user["sub"]
+    name = (google_user.get("name") or email.split("@")[0]).strip()
+    avatar = google_user.get("picture")
+
+    user = await db.users.find_one({"email": email})
+    if user:
+        if user.get("status") == "banned":
+            raise HTTPException(403, "Account banned")
+        updates = {
+            "google_sub": google_sub,
+            "email_verified": True,
+            "auth_provider": user.get("auth_provider") or "google",
+        }
+        if avatar and not user.get("avatar"):
+            updates["avatar"] = avatar
+        await db.users.update_one({"id": user["id"]}, {"$set": updates})
+        user = await db.users.find_one({"id": user["id"]})
+        if body.role == "editor" and user["role"] == "client":
+            await db.users.update_one({"id": user["id"]}, {"$set": {"role": "editor"}})
+            user["role"] = "editor"
+            await ensure_editor_profile(user)
+    else:
+        user = {
+            "id": str(uuid.uuid4()),
+            "name": name,
+            "email": email,
+            "phone": None,
+            "password_hash": "",
+            "role": body.role,
+            "email_verified": True,
+            "phone_verified": False,
+            "status": "active",
+            "created_at": now_utc().isoformat(),
+            "avatar": avatar,
+            "google_sub": google_sub,
+            "auth_provider": "google",
+        }
+        await db.users.insert_one(user)
+        if body.role == "editor":
+            await ensure_editor_profile(user)
+
+    access = create_token(user["id"], user["role"], REMEMBER_TTL_MIN if body.remember_me else ACCESS_TTL_MIN)
+    refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS * 1440, "refresh")
+    set_auth_cookies(response, access, refresh, body.remember_me)
+    return {"user": public_user(user)}
+
+@api.post("/auth/verify-login-otp")
+async def verify_login_otp(body: VerifyLoginOtpIn, response: Response):
+    email = body.email.lower().strip()
+    rec = await db.otp_codes.find_one({"email": email, "type": "login", "used": False}, sort=[("expires_at", -1)])
+    if not rec:
+        raise HTTPException(400, "No active login OTP")
+    if datetime.fromisoformat(rec["expires_at"]) < now_utc():
+        raise HTTPException(400, "OTP expired")
+    if rec["code"] != body.otp:
+        raise HTTPException(400, "Invalid OTP")
+
+    user = await db.users.find_one({"email": email})
+    if not user:
+        raise HTTPException(404, "User not found")
+    if user.get("status") == "banned":
+        raise HTTPException(403, "Account banned")
+
+    await db.otp_codes.update_one({"_id": rec["_id"]}, {"$set": {"used": True}})
+    ttl = REMEMBER_TTL_MIN if body.remember_me else ACCESS_TTL_MIN
+    access = create_token(user["id"], user["role"], ttl)
+    refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS*1440, "refresh")
+    set_auth_cookies(response, access, refresh, body.remember_me)
+    return {"user": public_user(user)}
+
+@api.post("/auth/resend-login-otp")
+async def resend_login_otp(body: ForgotIn):
+    email = body.email.lower().strip()
+    user = await db.users.find_one({"email": email})
+    if not user:
+        return {"ok": True}
+    if user.get("status") == "banned":
+        raise HTTPException(403, "Account banned")
+
+    await db.otp_codes.update_many({"email": email, "type": "login", "used": False},
+                                   {"$set": {"used": True}})
+    code = gen_otp()
+    expires = (now_utc() + timedelta(minutes=OTP_TTL_MIN)).isoformat()
+    await db.otp_codes.insert_one({"user_id": user["id"], "email": email, "type": "login",
+                                   "code": code, "expires_at": expires, "used": False})
+    await send_otp(email, code, "email", "login")
+    return with_dev_otp({"ok": True}, login_otp=code)
 
 @api.post("/auth/upgrade-to-editor")
 async def upgrade_to_editor(user=Depends(get_current_user)):
@@ -394,7 +658,7 @@ async def refresh_token(request: Request, response: Response):
         raise HTTPException(401, "Invalid refresh token")
 
 @api.post("/auth/verify-otp")
-async def verify_otp(body: VerifyOtpIn):
+async def verify_otp(body: VerifyOtpIn, response: Response):
     email = body.email.lower().strip()
     rec = await db.otp_codes.find_one({"email": email, "type": body.type, "used": False})
     if not rec:
@@ -406,6 +670,12 @@ async def verify_otp(body: VerifyOtpIn):
     await db.otp_codes.update_one({"_id": rec["_id"]}, {"$set": {"used": True}})
     field = "email_verified" if body.type == "email" else "phone_verified"
     await db.users.update_one({"email": email}, {"$set": {field: True}})
+    user = await db.users.find_one({"email": email})
+    if user and user.get("email_verified") and user.get("phone_verified"):
+        access = create_token(user["id"], user["role"], ACCESS_TTL_MIN)
+        refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS * 1440, "refresh")
+        set_auth_cookies(response, access, refresh, False)
+        return {"ok": True, "verified": body.type, "user": public_user(user)}
     return {"ok": True, "verified": body.type}
 
 @api.post("/auth/resend-otp")
@@ -420,8 +690,9 @@ async def resend_otp(body: ResendOtpIn):
                                    {"$set": {"used": True}})
     await db.otp_codes.insert_one({"user_id": user["id"], "email": email, "type": body.type,
                                    "code": code, "expires_at": expires, "used": False})
-    log.info(f"[OTP-RESEND] {email} {body.type}={code}")
-    return {"ok": True, "otp_dev": code}
+    destination = email if body.type == "email" else user.get("phone")
+    await send_otp(destination, code, body.type, "verification")
+    return with_dev_otp({"ok": True}, otp=code)
 
 @api.post("/auth/forgot-password")
 async def forgot(body: ForgotIn):

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useCallback, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
@@ -6,11 +6,12 @@ import api, { formatApiError } from "@/lib/api";
 import Logo from "@/components/Logo";
 import PhoneInput from "@/components/PhoneInput";
 import OtpInput from "@/components/OtpInput";
+import GoogleAuthButton from "@/components/GoogleAuthButton";
 import { COUNTRIES } from "@/constants/countries";
 import { Loader2, CheckCircle2, Mail, Phone as PhoneIcon, ArrowRight } from "lucide-react";
 
 export default function Register() {
-  const { register, refresh } = useAuth();
+  const { register, refresh, googleAuth } = useAuth();
   const nav = useNavigate();
   const [sp] = useSearchParams();
   const initialRole = sp.get("role") === "editor" ? "editor" : "client";
@@ -28,6 +29,10 @@ export default function Register() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const fullPhone = `${country.dial}${phone}`;
+  const finish = useCallback((roleOverride) => {
+    const role = typeof roleOverride === "string" ? roleOverride : form.role;
+    nav(role === "editor" ? "/editor/onboarding" : "/dashboard");
+  }, [form.role, nav]);
 
   const submit = async (e) => {
     e?.preventDefault();
@@ -41,24 +46,33 @@ export default function Register() {
     finally { setBusy(false); }
   };
 
+  const handleGoogle = useCallback(async (credential) => {
+    setBusy(true); setErr("");
+    try {
+      const u = await googleAuth(credential, form.role, true);
+      finish(u.role);
+    } catch (e) { setErr(formatApiError(e)); }
+    finally { setBusy(false); }
+  }, [finish, form.role, googleAuth]);
+
   const verify = async (type) => {
     const otp = type === "email" ? emailOtp : phoneOtp;
     try {
       await api.post("/auth/verify-otp", { email: form.email, otp, type });
       if (type === "email") { setEmailVerified(true); setStep(3); }
       else { setPhoneVerified(true); setStep(4); }
-      await refresh();
+      if (type === "phone") await refresh();
     } catch (e) { alert(formatApiError(e)); }
   };
 
   const resend = async (type) => {
     try {
       const { data } = await api.post("/auth/resend-otp", { email: form.email, type });
-      setOtpDev(prev => ({ ...(prev || {}), [`${type}_otp`]: data.otp_dev }));
+      if (data.otp_dev?.otp) {
+        setOtpDev(prev => ({ ...(prev || {}), [`${type}_otp`]: data.otp_dev.otp }));
+      }
     } catch (e) { alert(formatApiError(e)); }
   };
-
-  const finish = () => nav(form.role === "editor" ? "/editor/onboarding" : "/dashboard");
 
   const totalSteps = 3;
   const stepIndex = Math.min(step, totalSteps);
@@ -114,6 +128,13 @@ export default function Register() {
                   ))}
                 </div>
 
+                <GoogleAuthButton onCredential={handleGoogle} text="signup_with" disabled={busy} />
+                <div className="flex items-center gap-3 text-xs text-gray-400">
+                  <div className="h-px flex-1 bg-gray-200" />
+                  <span>or</span>
+                  <div className="h-px flex-1 bg-gray-200" />
+                </div>
+
                 <div>
                   <label className="input-label">Full name</label>
                   <input data-testid="reg-name" required className="input" value={form.name} onChange={e=>set("name", e.target.value)} />
@@ -155,7 +176,7 @@ export default function Register() {
                 </div>
                 {otpDev?.email_otp && (
                   <div className="card p-3 bg-gray-50 border-dashed border-gray-300 text-xs text-gray-700 font-mono">
-                    📨 Dev code: <span className="font-bold text-gray-900">{otpDev.email_otp}</span>
+                    Dev code: <span className="font-bold text-gray-900">{otpDev.email_otp}</span>
                   </div>
                 )}
                 <OtpInput
@@ -181,7 +202,7 @@ export default function Register() {
                 </div>
                 {otpDev?.phone_otp && (
                   <div className="card p-3 bg-gray-50 border-dashed border-gray-300 text-xs text-gray-700 font-mono">
-                    📱 Dev code: <span className="font-bold text-gray-900">{otpDev.phone_otp}</span>
+                    Dev code: <span className="font-bold text-gray-900">{otpDev.phone_otp}</span>
                   </div>
                 )}
                 <OtpInput
@@ -208,12 +229,6 @@ export default function Register() {
               </motion.div>
             )}
           </AnimatePresence>
-
-          {(step === 2 || step === 3) && (
-            <button onClick={finish} className="mt-6 text-xs text-gray-500 hover:text-gray-900 underline" data-testid="skip-verify">
-              I'll verify later
-            </button>
-          )}
         </div>
       </div>
     </div>

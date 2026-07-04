@@ -20,14 +20,24 @@ export function AuthProvider({ children }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const login = async (email, password, remember_me) => {
-    const { data } = await api.post("/auth/login", { email, password, remember_me });
+  const login = async (identifier, password, remember_me) => {
+    const { data } = await api.post("/auth/login", { email: identifier, password, remember_me });
+    if (data.login_otp_required) return data;
+    setUser(data.user);
+    return data.user;
+  };
+  const verifyLoginOtp = async (email, otp, remember_me) => {
+    const { data } = await api.post("/auth/verify-login-otp", { email, otp, remember_me });
+    setUser(data.user);
+    return data.user;
+  };
+  const googleAuth = async (credential, role = "client", remember_me = true) => {
+    const { data } = await api.post("/auth/google", { credential, role, remember_me });
     setUser(data.user);
     return data.user;
   };
   const register = async (payload) => {
     const { data } = await api.post("/auth/register", payload);
-    setUser(data.user);
     return data;
   };
   const logout = async () => {
@@ -36,7 +46,7 @@ export function AuthProvider({ children }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, ready, login, register, logout, refresh, setUser }}>
+    <AuthContext.Provider value={{ user, ready, login, verifyLoginOtp, googleAuth, register, logout, refresh, setUser }}>
       {children}
     </AuthContext.Provider>
   );
