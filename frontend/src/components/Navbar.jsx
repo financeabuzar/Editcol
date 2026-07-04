@@ -18,7 +18,7 @@ export default function Navbar() {
     { to: "/success-stories", label: "Success Stories" },
   ];
   const isLoggedIn = user && user !== false;
-  const links = isLoggedIn ? appLinks : [];
+  const links = appLinks;
 
   const onLogout = async () => { await logout(); nav("/"); };
 
@@ -27,7 +27,7 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-3 text-white">
         <div className="flex min-w-0 items-center gap-10">
           <Logo size="md" />
-          <nav className="hidden md:flex items-center gap-7 text-sm">
+          <nav className="hidden md:flex items-center gap-4 lg:gap-7 text-sm">
             {links.map((l) => (
               <NavLink
                 key={l.to} to={l.to} data-testid={`nav-${l.to.replace(/\//g,"")}`}
