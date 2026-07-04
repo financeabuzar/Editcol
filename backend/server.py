@@ -191,47 +191,122 @@ class AdminActionIn(BaseModel):
     reason: Optional[str] = None
 
 # ------------------------------- Auth endpoints --------------------------------
+import traceback
+
 @api.post("/auth/register")
 async def register(body: RegisterIn, response: Response):
-    email = body.email.lower().strip()
-    if await db.users.find_one({"email": email}):
-        raise HTTPException(400, "Email already registered")
-    if await db.users.find_one({"phone": body.phone}):
-        raise HTTPException(400, "Phone already registered")
-    uid = str(uuid.uuid4())
-    user = {
-        "id": uid, "name": body.name.strip(), "email": email, "phone": body.phone,
-        "password_hash": hash_password(body.password), "role": body.role,
-        "email_verified": False, "phone_verified": False, "status": "active",
-        "created_at": now_utc().isoformat(), "avatar": None,
-    }
-    await db.users.insert_one(user)
+    try:
+        email = body.email.lower().strip()
 
-    if body.role == "editor":
-        await db.editors.insert_one({
-            "id": uid, "user_id": uid, "bio": "", "skills": [], "portfolio": [],
-            "hourly_rate": None, "starting_price": None, "location": None,
-            "languages": [], "software": [], "avatar": None,
-            "is_public": False, "badges": [],
-            "trust_score": {"completion_rate": 0, "response_rate": 0,
-                            "on_time_delivery_rate": 0, "satisfaction": 0},
-            "stats": {"projects_completed": 0, "total_reviews": 0, "avg_rating": 0},
+        print("Incoming body:", body.model_dump())
+
+        if await db.users.find_one({"email": email}):
+            raise HTTPException(400, "Email already registered")
+
+        if await db.users.find_one({"phone": body.phone}):
+            raise HTTPException(400, "Phone already registered")
+
+        uid = str(uuid.uuid4())
+
+        user = {
+            "id": uid,
+            "name": body.name.strip(),
+            "email": email,
+            "phone": body.phone,
+            "password_hash": hash_password(body.password),
+            "role": body.role,
+            "email_verified": False,
+            "phone_verified": False,
+            "status": "active",
             "created_at": now_utc().isoformat(),
-        })
+            "avatar": None,
+        }
 
-    # Generate OTPs (mocked — returned for testing)
-    email_otp = gen_otp(); phone_otp = gen_otp()
-    expires = (now_utc() + timedelta(minutes=OTP_TTL_MIN)).isoformat()
-    await db.otp_codes.insert_many([
-        {"user_id": uid, "email": email, "type": "email", "code": email_otp, "expires_at": expires, "used": False},
-        {"user_id": uid, "email": email, "type": "phone", "code": phone_otp, "expires_at": expires, "used": False},
-    ])
-    log.info(f"[OTP] {email} email_otp={email_otp} phone_otp={phone_otp}")
+        print("Before insert user")
+        await db.users.insert_one(user)
+        print("User inserted")
 
-    access = create_token(uid, body.role, ACCESS_TTL_MIN)
-    refresh = create_token(uid, body.role, REFRESH_TTL_DAYS*1440, "refresh")
-    set_auth_cookies(response, access, refresh, False)
-    return {"user": public_user(user), "otp_dev": {"email_otp": email_otp, "phone_otp": phone_otp}}
+        if body.role == "editor":
+            print("Creating editor profile...")
+            await db.editors.insert_one({
+                "id": uid,
+                "user_id": uid,
+                "bio": "",
+                "skills": [],
+                "portfolio": [],
+                "hourly_rate": None,
+                "starting_price": None,
+                "location": None,
+                "languages": [],
+                "software": [],
+                "avatar": None,
+                "is_public": False,
+                "badges": [],
+                "trust_score": {
+                    "completion_rate": 0,
+                    "response_rate": 0,
+                    "on_time_delivery_rate": 0,
+                    "satisfaction": 0,
+                },
+                "stats": {
+                    "projects_completed": 0,
+                    "total_reviews": 0,
+                    "avg_rating": 0,
+                },
+                "created_at": now_utc().isoformat(),
+            })
+
+        email_otp = gen_otp()
+        phone_otp = gen_otp()
+
+        expires = (now_utc() + timedelta(minutes=OTP_TTL_MIN)).isoformat()
+
+        print("Saving OTP...")
+
+        await db.otp_codes.insert_many([
+            {
+                "user_id": uid,
+                "email": email,
+                "type": "email",
+                "code": email_otp,
+                "expires_at": expires,
+                "used": False,
+            },
+            {
+                "user_id": uid,
+                "email": email,
+                "type": "phone",
+                "code": phone_otp,
+                "expires_at": expires,
+                "used": False,
+            },
+        ])
+
+        print("Generating tokens...")
+
+        access = create_token(uid, body.role, ACCESS_TTL_MIN)
+        refresh = create_token(uid, body.role, REFRESH_TTL_DAYS * 1440, "refresh")
+
+        set_auth_cookies(response, access, refresh, False)
+
+        print("Register Success")
+
+        return {
+            "user": public_user(user),
+            "otp_dev": {
+                "email_otp": email_otp,
+                "phone_otp": phone_otp,
+            },
+        }
+
+    except Exception as e:
+        print("=" * 60)
+        print("REGISTER ERROR")
+        print(type(e))
+        print(e)
+        traceback.print_exc()
+        print("=" * 60)
+        raise
 
 @api.post("/auth/login")
 async def login(body: LoginIn, request: Request, response: Response):
