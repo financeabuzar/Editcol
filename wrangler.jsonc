@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "editcol",
+  "compatibility_date": "2026-07-04",
+  "assets": {
+    "directory": "./frontend/build",
+    "not_found_handling": "single-page-application"
+  }
+}
