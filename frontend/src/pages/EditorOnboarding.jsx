@@ -61,15 +61,15 @@ export default function EditorOnboarding() {
     finally { setBusy(false); }
   };
 
-  if (!user || user.role !== "editor") return <div className="max-w-3xl mx-auto px-6 py-12">You need an editor account.</div>;
+  if (!user || user.role !== "editor") return <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">You need an editor account.</div>;
 
   return (
-    <div className="fade-in max-w-4xl mx-auto px-6 lg:px-10 py-10">
+    <div className="fade-in max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-10">
       <h1 className="font-heading text-3xl font-bold text-gray-900">Editor profile</h1>
       <p className="text-sm text-gray-500 mt-1">Complete every section to go live on the marketplace.</p>
 
       {editor && (
-        <div className="mt-4 mb-8 flex items-center gap-3">
+        <div className="mt-4 mb-8 flex flex-wrap items-center gap-3">
           <span className={`badge ${editor.is_public ? "badge-pro" : "badge-verified"}`}>
             {editor.is_public ? "Public — live" : "Private — not listed"}
           </span>
@@ -77,9 +77,9 @@ export default function EditorOnboarding() {
         </div>
       )}
 
-      <section className="card p-6 space-y-5">
+      <section className="card p-4 sm:p-6 space-y-5">
         {/* Avatar */}
-        <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="w-20 h-20 rounded-full bg-gray-100 overflow-hidden">
             {form.avatar_b64 ? <img src={form.avatar_b64} className="w-full h-full object-cover" alt=""/> : <div className="w-full h-full flex items-center justify-center text-2xl text-gray-300 font-heading">{user.name?.[0]}</div>}
           </div>
@@ -121,7 +121,7 @@ export default function EditorOnboarding() {
         </div>
 
         <div>
-          <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center justify-between gap-3 mb-2">
             <p className="input-label !mb-0">Portfolio</p>
             <button type="button" onClick={addPortfolio} data-testid="add-portfolio" className="text-xs font-semibold text-gray-900 inline-flex items-center gap-1"><Plus size={14}/> Add item</button>
           </div>
@@ -149,8 +149,8 @@ export default function EditorOnboarding() {
 
         {err && <p className="text-sm text-red-600">{err}</p>}
 
-        <div className="pt-3 flex justify-end">
-          <button onClick={save} disabled={busy} data-testid="save-profile" className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
+        <div className="pt-3 flex justify-stretch sm:justify-end">
+          <button onClick={save} disabled={busy} data-testid="save-profile" className="btn-primary inline-flex w-full sm:w-auto items-center justify-center gap-2 disabled:opacity-50">
             {busy && <Loader2 size={16} className="animate-spin"/>} Save profile
           </button>
         </div>

@@ -52,9 +52,9 @@ export default function LegalPage() {
   const { slug } = useParams();
   const page = PAGES[slug] || PAGES.terms;
   return (
-    <div className="fade-in max-w-3xl mx-auto px-6 lg:px-10 py-16">
+    <div className="fade-in max-w-3xl mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-16">
       <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Legal</p>
-      <h1 className="font-heading text-4xl font-bold text-gray-900 mt-2" data-testid={`legal-title-${slug}`}>{page.title}</h1>
+      <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900 mt-2" data-testid={`legal-title-${slug}`}>{page.title}</h1>
       <p className="text-sm text-gray-500 mt-2">Last updated: {new Date().toLocaleDateString()}</p>
       <article className="prose prose-gray max-w-none mt-8 whitespace-pre-wrap text-gray-700 leading-relaxed text-sm">
         {page.body.trim()}

@@ -42,13 +42,13 @@ export default function EditorProfile() {
     alert("User blocked.");
   };
 
-  if (loading) return <div className="max-w-7xl mx-auto px-6 py-20 text-gray-500">Loading…</div>;
-  if (!editor) return <div className="max-w-7xl mx-auto px-6 py-20">Editor not found.</div>;
+  if (loading) return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-gray-500">Loading…</div>;
+  if (!editor) return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">Editor not found.</div>;
 
   const ts = editor.trust_score || {};
 
   return (
-    <div className="fade-in max-w-7xl mx-auto px-6 lg:px-10 py-12 grid lg:grid-cols-[360px,1fr] gap-10">
+    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-10 sm:py-12 grid lg:grid-cols-[360px,1fr] gap-8 lg:gap-10">
       {/* Sidebar */}
       <aside className="lg:sticky lg:top-24 self-start space-y-6">
         <div className="card p-6">
@@ -58,8 +58,8 @@ export default function EditorProfile() {
                 ? <img src={editor.avatar} alt={editor.name} className="w-full h-full object-cover" />
                 : <div className="w-full h-full flex items-center justify-center text-2xl font-heading text-gray-400">{editor.name?.[0]}</div>}
             </div>
-            <div>
-              <p className="font-semibold text-lg text-gray-900" data-testid="editor-name">{editor.name}</p>
+            <div className="min-w-0">
+              <p className="font-semibold text-lg text-gray-900 break-words" data-testid="editor-name">{editor.name}</p>
               {editor.location && <p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><MapPin size={12}/> {editor.location}</p>}
             </div>
           </div>
@@ -77,7 +77,7 @@ export default function EditorProfile() {
             </button>
           </div>
 
-          <div className="mt-5 pt-5 border-t border-gray-200 grid grid-cols-2 gap-2 text-xs">
+          <div className="mt-5 pt-5 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
             <button onClick={() => requireAuth() && setShowReport("profile")} data-testid="report-profile-btn" className="text-gray-500 hover:text-gray-900 inline-flex items-center gap-1.5"><Flag size={12}/> Report Profile</button>
             <button onClick={() => requireAuth() && setShowReport("scam")} data-testid="report-scam-btn" className="text-red-600 hover:text-red-700 inline-flex items-center gap-1.5"><ShieldAlert size={12}/> Report Scam</button>
             <button onClick={onBlock} data-testid="block-user-btn" className="col-span-2 text-gray-500 hover:text-gray-900 inline-flex items-center gap-1.5"><UserX size={12}/> Block User</button>
@@ -139,7 +139,7 @@ export default function EditorProfile() {
             <div className="mt-4 space-y-4">
               {editor.reviews.map(r => (
                 <div key={r.id} className="card p-5">
-                  <div className="flex justify-between items-start">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
                     <div>
                       <p className="font-semibold text-gray-900">{r.client_name}</p>
                       <div className="flex items-center gap-0.5 mt-1">
@@ -203,9 +203,9 @@ function HireDialog({ editor, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-6 scroll-area" data-testid="hire-modal">
-        <div className="flex justify-between items-start mb-4">
-          <div>
+      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 scroll-area" data-testid="hire-modal">
+        <div className="flex justify-between items-start gap-3 mb-4">
+          <div className="min-w-0">
             <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Project request</p>
             <h3 className="font-heading text-2xl font-semibold text-gray-900">Hire {editor.name}</h3>
           </div>
@@ -269,9 +269,9 @@ function HireDialog({ editor, onClose }) {
 
           {err && <p className="text-sm text-red-600">{err}</p>}
 
-          <div className="flex justify-end gap-2 pt-2">
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
             <button onClick={onClose} className="btn-outline">Cancel</button>
-            <button onClick={submit} disabled={busy || !form.title || !form.budget} data-testid="proj-submit" className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
+            <button onClick={submit} disabled={busy || !form.title || !form.budget} data-testid="proj-submit" className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50">
               {busy && <Loader2 size={16} className="animate-spin" />} Send project request
             </button>
           </div>
@@ -291,13 +291,13 @@ function ReportDialog({ kind, targetId, onClose }) {
   };
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-6" data-testid="report-modal">
-        <div className="flex justify-between items-start mb-3">
+      <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6" data-testid="report-modal">
+        <div className="flex justify-between items-start gap-3 mb-3">
           <h3 className="font-heading text-xl font-semibold text-gray-900">Report — {kind === "scam" ? "Scam" : "Profile"}</h3>
           <button onClick={onClose}><X size={18}/></button>
         </div>
         <textarea data-testid="report-reason" rows={4} className="input" placeholder="Describe the issue…" value={reason} onChange={e=>setReason(e.target.value)} />
-        <div className="flex justify-end gap-2 mt-4">
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-4">
           <button onClick={onClose} className="btn-outline">Cancel</button>
           <button onClick={submit} disabled={busy || !reason} data-testid="report-submit" className="btn-primary">Submit report</button>
         </div>

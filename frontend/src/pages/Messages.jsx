@@ -106,12 +106,12 @@ export default function Messages() {
   const active = convs.find(c => c.id === activeId);
 
   return (
-    <div className="fade-in max-w-7xl mx-auto px-6 lg:px-10 py-8">
+    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
       <h1 className="font-heading text-3xl font-bold text-gray-900 mb-6">Messages</h1>
 
-      <div className="grid lg:grid-cols-[340px,1fr] gap-6 h-[70vh]">
+      <div className="grid lg:grid-cols-[340px,1fr] gap-4 lg:gap-6 min-h-[70vh] lg:h-[70vh]">
         {/* Conversations list */}
-        <aside className="card overflow-y-auto scroll-area">
+        <aside className="card overflow-y-auto scroll-area max-h-72 lg:max-h-none">
           {loadingConvs ? (
             <div className="p-4 space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-14"/>)}</div>
           ) : convs.length === 0 ? (
@@ -134,7 +134,7 @@ export default function Messages() {
         </aside>
 
         {/* Chat pane */}
-        <section className="card flex flex-col overflow-hidden">
+        <section className="card flex flex-col overflow-hidden min-h-[60vh] lg:min-h-0">
           {!active ? (
             <div className="flex-1 flex items-center justify-center text-gray-400">Select a conversation</div>
           ) : (
@@ -143,8 +143,8 @@ export default function Messages() {
                 <div className="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center font-heading text-gray-500">
                   {active.other_user.avatar ? <img src={active.other_user.avatar} className="w-full h-full object-cover" alt=""/> : active.other_user.name?.[0]}
                 </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{active.other_user.name}</p>
+                <div className="min-w-0">
+                  <p className="font-semibold text-gray-900 truncate">{active.other_user.name}</p>
                   <p className="text-xs text-gray-500">{typingFrom ? "Typing…" : active.other_user.role}</p>
                 </div>
               </header>
@@ -170,7 +170,7 @@ export default function Messages() {
                 <textarea data-testid="chat-input" rows={1} className="input resize-none" placeholder="Type a message…"
                   value={text} onChange={e=>{ setText(e.target.value); sendTyping(); }}
                   onKeyDown={e=>{ if (e.key==="Enter" && !e.shiftKey) { e.preventDefault(); send(); } }} />
-                <button onClick={send} disabled={busy} data-testid="chat-send" className="btn-primary px-4 py-3 disabled:opacity-50">
+                <button onClick={send} disabled={busy} data-testid="chat-send" className="btn-primary px-4 py-3 disabled:opacity-50 shrink-0">
                   <Send size={16}/>
                 </button>
               </div>
@@ -196,7 +196,7 @@ async function getWsToken() {
 function MessageBubble({ m, mine }) {
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm ${mine ? "bg-ink text-white" : "bg-white border border-gray-200 text-gray-900"} ${m.system ? "italic opacity-90" : ""}`}>
+      <div className={`max-w-[86%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-sm break-words ${mine ? "bg-ink text-white" : "bg-white border border-gray-200 text-gray-900"} ${m.system ? "italic opacity-90" : ""}`}>
         {m.attachment_b64 && m.attachment_type === "image" && <img src={m.attachment_b64} className="rounded-lg max-h-60 mb-2" alt="attachment"/>}
         {m.attachment_b64 && m.attachment_type === "video" && <video src={m.attachment_b64} controls className="rounded-lg max-h-60 mb-2"/>}
         {m.attachment_b64 && m.attachment_type === "file" && (

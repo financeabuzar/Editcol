@@ -17,17 +17,17 @@ const STEPS = [
 export default function HowItWorks() {
   return (
     <div className="fade-in">
-      <section className="max-w-5xl mx-auto px-6 lg:px-10 pt-20 pb-10 text-center">
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-14 sm:pt-20 pb-10 text-center">
         <p className="text-xs font-bold tracking-wider uppercase text-gray-500">How EditCol works</p>
-        <h1 className="font-heading text-5xl sm:text-6xl font-bold text-gray-900 mt-4 leading-tight">
+        <h1 className="font-heading text-4xl sm:text-6xl font-bold text-gray-900 mt-4 leading-tight break-words">
           A frictionless workflow,<br/>built on <span className="text-neon-grad">trust</span>.
         </h1>
-        <p className="mt-5 text-lg text-gray-600 max-w-2xl mx-auto">
+        <p className="mt-5 text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
           Eight clean steps from brief to delivery — no DMs, no spreadsheets, no chasing.
         </p>
       </section>
 
-      <section className="max-w-6xl mx-auto px-6 lg:px-10 pb-20">
+      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-10 pb-16 sm:pb-20">
         <div className="relative">
           {/* Vertical neon track on the left */}
           <div className="absolute left-6 sm:left-8 top-0 bottom-0 w-px bg-gradient-to-b from-[#39FF14] via-[#DFFF00] to-transparent hidden sm:block" />
@@ -53,7 +53,7 @@ export default function HowItWorks() {
                     <div className="flex-1">
                       <p className="text-neon-grad font-mono font-bold text-sm">STEP {s.n}</p>
                       <p className="mt-1 font-heading text-xl sm:text-2xl font-semibold text-gray-900">{s.t}</p>
-                      <p className="mt-2 text-gray-600 leading-relaxed">{s.d}</p>
+                      <p className="mt-2 text-sm sm:text-base text-gray-600 leading-relaxed">{s.d}</p>
                     </div>
                   </div>
                 </TiltCard>
@@ -63,7 +63,7 @@ export default function HowItWorks() {
         </div>
 
         <div className="mt-16 text-center">
-          <Link to="/ai-match" className="btn-primary inline-flex items-center gap-2">
+          <Link to="/ai-match" className="btn-primary inline-flex w-full sm:w-auto items-center justify-center gap-2">
             Try AI Match now <ArrowRight size={16}/>
           </Link>
         </div>

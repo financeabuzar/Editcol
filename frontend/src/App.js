@@ -1,9 +1,11 @@
 import "@/App.css";
-import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { useEffect } from "react";
+import { BrowserRouter, Navigate, Routes, Route, useLocation } from "react-router-dom";
 import { AuthProvider } from "@/context/AuthContext";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
+import { applyTheme, getInitialTheme } from "@/components/ThemeToggle";
 
 import Home from "@/pages/Home";
 import BrowseEditors from "@/pages/BrowseEditors";
@@ -37,31 +39,40 @@ function Shell({ children }) {
   );
 }
 
+function PrivatePage({ children, role }) {
+  return <ProtectedRoute role={role}>{children}</ProtectedRoute>;
+}
+
 export default function App() {
+  useEffect(() => {
+    applyTheme(getInitialTheme());
+  }, []);
+
   return (
     <AuthProvider>
       <BrowserRouter>
         <Shell>
           <Routes>
             <Route path="/" element={<Home/>} />
-            <Route path="/browse" element={<BrowseEditors/>} />
-            <Route path="/editor/:id" element={<EditorProfile/>} />
-            <Route path="/how-it-works" element={<HowItWorks/>} />
-            <Route path="/trust" element={<TrustSafety/>} />
-            <Route path="/success-stories" element={<SuccessStories/>} />
-            <Route path="/ai-match" element={<AIMatch/>} />
-            <Route path="/legal/:slug" element={<LegalPage/>} />
+            <Route path="/browse" element={<PrivatePage><BrowseEditors/></PrivatePage>} />
+            <Route path="/editor/:id" element={<PrivatePage><EditorProfile/></PrivatePage>} />
+            <Route path="/how-it-works" element={<PrivatePage><HowItWorks/></PrivatePage>} />
+            <Route path="/trust" element={<PrivatePage><TrustSafety/></PrivatePage>} />
+            <Route path="/success-stories" element={<PrivatePage><SuccessStories/></PrivatePage>} />
+            <Route path="/ai-match" element={<PrivatePage><AIMatch/></PrivatePage>} />
+            <Route path="/legal/:slug" element={<PrivatePage><LegalPage/></PrivatePage>} />
 
             <Route path="/login" element={<Login/>} />
             <Route path="/register" element={<Register/>} />
             <Route path="/forgot-password" element={<ForgotPassword/>} />
             <Route path="/reset-password" element={<ResetPassword/>} />
 
-            <Route path="/become-editor" element={<ProtectedRoute><BecomeEditor/></ProtectedRoute>} />
-            <Route path="/dashboard" element={<ProtectedRoute><Dashboard/></ProtectedRoute>} />
-            <Route path="/editor/onboarding" element={<ProtectedRoute role="editor"><EditorOnboarding/></ProtectedRoute>} />
-            <Route path="/messages" element={<ProtectedRoute><Messages/></ProtectedRoute>} />
-            <Route path="/admin" element={<ProtectedRoute role="admin"><Admin/></ProtectedRoute>} />
+            <Route path="/become-editor" element={<PrivatePage><BecomeEditor/></PrivatePage>} />
+            <Route path="/dashboard" element={<PrivatePage><Dashboard/></PrivatePage>} />
+            <Route path="/editor/onboarding" element={<PrivatePage role="editor"><EditorOnboarding/></PrivatePage>} />
+            <Route path="/messages" element={<PrivatePage><Messages/></PrivatePage>} />
+            <Route path="/admin" element={<PrivatePage role="admin"><Admin/></PrivatePage>} />
+            <Route path="*" element={<PrivatePage><Navigate to="/dashboard" replace /></PrivatePage>} />
           </Routes>
         </Shell>
       </BrowserRouter>

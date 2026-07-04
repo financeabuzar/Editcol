@@ -18,23 +18,23 @@ export default function Dashboard() {
   if (!user) return null;
 
   return (
-    <div className="fade-in max-w-7xl mx-auto px-6 lg:px-10 py-10">
-      <div className="flex justify-between items-start mb-8">
-        <div>
+    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-10">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3 mb-8">
+        <div className="min-w-0">
           <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Welcome back</p>
-          <h1 className="font-heading text-4xl font-bold text-gray-900">{user.name}</h1>
+          <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900 break-words">{user.name}</h1>
         </div>
-        <span className="badge badge-pro">{user.role.toUpperCase()}</span>
+        <span className="badge badge-pro w-fit">{user.role.toUpperCase()}</span>
       </div>
 
       {/* Verification banner */}
       {(!user.email_verified || !user.phone_verified) && (
-        <div className="card p-4 mb-6 flex items-center gap-3 border-amber-200 bg-amber-50">
+        <div className="card p-4 mb-6 flex flex-col sm:flex-row sm:items-center gap-3 border-amber-200 bg-amber-50">
           <AlertTriangle size={18} className="text-amber-600"/>
           <div className="flex-1 text-sm text-amber-900">
             Verify your {!user.email_verified && "email"}{!user.email_verified && !user.phone_verified && " and "}{!user.phone_verified && "phone"} to unlock all features.
           </div>
-          <Link to="/register" className="text-sm font-semibold text-amber-900 hover:underline">Verify now →</Link>
+          <Link to="/register" className="text-sm font-semibold text-amber-900 hover:underline whitespace-nowrap">Verify now →</Link>
         </div>
       )}
 
@@ -46,12 +46,12 @@ export default function Dashboard() {
 
       {user.role === "editor" && editor && (
         <section className="card p-6 mb-10">
-          <div className="flex justify-between items-start mb-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-4">
             <div>
               <h2 className="font-heading text-xl font-semibold text-gray-900">Editor profile</h2>
               <p className="text-sm text-gray-500">{editor.is_public ? "Live on EditCol marketplace" : "Private — complete your profile to go live"}</p>
             </div>
-            <Link to="/editor/onboarding" className="btn-outline text-sm">Edit profile</Link>
+            <Link to="/editor/onboarding" className="btn-outline text-sm text-center">Edit profile</Link>
           </div>
           <div className="grid sm:grid-cols-4 gap-3 mb-4">
             <Checklist label="Email verified" done={user.email_verified}/>
@@ -74,8 +74,8 @@ export default function Dashboard() {
         ) : (
           <div className="card overflow-hidden divide-y divide-gray-200">
             {projects.map(p => (
-              <div key={p.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-                <div>
+              <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-gray-50">
+                <div className="min-w-0">
                   <p className="font-semibold text-gray-900">{p.title}</p>
                   <p className="text-xs text-gray-500">{p.content_type} · ${p.budget} · Deadline {p.deadline}</p>
                 </div>

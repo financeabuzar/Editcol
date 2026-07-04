@@ -21,13 +21,13 @@ export default function Admin() {
   }, [tab]);
 
   return (
-    <div className="fade-in max-w-7xl mx-auto px-6 lg:px-10 py-10">
-      <div className="flex items-center justify-between mb-8">
+    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-8 sm:py-10">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-8">
         <div>
           <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Trust & Safety</p>
-          <h1 className="font-heading text-4xl font-bold text-gray-900">Admin Console</h1>
+          <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900">Admin Console</h1>
         </div>
-        <span className="badge badge-elite">ADMIN</span>
+        <span className="badge badge-elite w-fit">ADMIN</span>
       </div>
 
       <div className="grid lg:grid-cols-[220px,1fr] gap-8">
@@ -92,16 +92,16 @@ function UsersTab() {
       </div>
       <div className="card overflow-hidden divide-y divide-gray-100">
         {filtered.map(u => (
-          <div key={u.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-            <div>
-              <p className="font-semibold text-gray-900">{u.name} <span className="text-xs text-gray-500 font-mono ml-2">{u.email}</span></p>
+          <div key={u.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-gray-50">
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-900 break-words">{u.name} <span className="text-xs text-gray-500 font-mono sm:ml-2 break-all">{u.email}</span></p>
               <p className="text-xs text-gray-500 mt-0.5">
                 {u.role} · {u.status}
                 {u.email_verified && " · email ✓"}
                 {u.phone_verified && " · phone ✓"}
               </p>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               {u.status === "active"
                 ? <>
                     <button onClick={()=>action(u.id,"suspend")} data-testid={`suspend-${u.id}`} className="btn-outline text-xs">Suspend</button>
@@ -125,9 +125,9 @@ function EditorsTab() {
   return (
     <div className="card overflow-hidden divide-y divide-gray-100">
       {editors.length === 0 ? <p className="p-6 text-center text-gray-500">No editors yet.</p> : editors.map(e => (
-        <div key={e.id} className="p-4 flex items-center justify-between hover:bg-gray-50">
-          <div>
-            <p className="font-semibold text-gray-900">{e.name} <span className="text-xs font-mono text-gray-500 ml-2">{e.email}</span></p>
+        <div key={e.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 hover:bg-gray-50">
+          <div className="min-w-0">
+            <p className="font-semibold text-gray-900 break-words">{e.name} <span className="text-xs font-mono text-gray-500 sm:ml-2 break-all">{e.email}</span></p>
             <p className="text-xs text-gray-500 mt-0.5">
               {e.is_public ? "Public" : "Private"} · {e.email_verified?"email ✓":"email ✗"} · {e.phone_verified?"phone ✓":"phone ✗"}
             </p>
@@ -149,8 +149,8 @@ function ReportsTab() {
     <div className="space-y-3">
       {reports.length === 0 ? <p className="card p-6 text-center text-gray-500">No reports.</p> : reports.map(r => (
         <div key={r.id} className="card p-5">
-          <div className="flex justify-between items-start">
-            <div>
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+            <div className="min-w-0">
               <span className={`badge ${r.kind==="scam"?"badge-elite":"badge-verified"}`}>{r.kind.toUpperCase()}</span>
               <p className="mt-2 font-semibold text-gray-900">Target: {r.target_name}</p>
               <p className="text-xs text-gray-500">Reporter: {r.reporter_name}</p>
@@ -178,8 +178,8 @@ function ProjectsTab() {
   return (
     <div className="card overflow-hidden divide-y divide-gray-100">
       {projects.length === 0 ? <p className="p-6 text-center text-gray-500">No projects yet.</p> : projects.map(p => (
-        <div key={p.id} className="p-4 flex justify-between items-center hover:bg-gray-50">
-          <div>
+        <div key={p.id} className="p-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 hover:bg-gray-50">
+          <div className="min-w-0">
             <p className="font-semibold text-gray-900">{p.title}</p>
             <p className="text-xs text-gray-500">{p.content_type} · ${p.budget} · deadline {p.deadline}</p>
           </div>
@@ -198,9 +198,9 @@ function ReviewsTab() {
   return (
     <div className="space-y-3">
       {reviews.length === 0 ? <p className="card p-6 text-center text-gray-500">No reviews.</p> : reviews.map(r => (
-        <div key={r.id} className="card p-4 flex justify-between items-start">
-          <div>
-            <div className="flex items-center gap-2">
+        <div key={r.id} className="card p-4 flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
               <p className="font-semibold text-gray-900">{r.client_name}</p>
               <div className="flex">{Array.from({length:5}).map((_,i)=><Star key={i} size={12} className={i<r.rating?"text-amber-500 fill-amber-500":"text-gray-300"}/>)}</div>
             </div>

@@ -48,19 +48,19 @@ export default function AIMatch() {
         <div className="absolute right-[-100px] top-[-60px] hidden md:block">
           <AiOrb size={420} />
         </div>
-        <div className="relative max-w-4xl mx-auto px-6 lg:px-10 pt-20 pb-10">
+        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 pt-14 sm:pt-20 pb-10">
           <p className="text-xs font-bold tracking-wider uppercase text-gray-500"><Sparkles size={12} className="inline -mt-0.5 text-[#39FF14]"/> AI Match</p>
-          <h1 className="font-heading text-5xl sm:text-6xl font-bold text-gray-900 mt-3 leading-tight">
+          <h1 className="font-heading text-4xl sm:text-6xl font-bold text-gray-900 mt-3 leading-tight break-words">
             Describe your edit.<br/>We'll <span className="text-neon-grad">match the editor</span>.
           </h1>
-          <p className="mt-5 text-lg text-gray-600 max-w-2xl">
+          <p className="mt-5 text-base sm:text-lg text-gray-600 max-w-2xl">
             Our AI ranks verified editors by skill, badges, trust score, price, and turnaround feasibility for your deadline.
           </p>
         </div>
       </section>
 
-      <section className="max-w-4xl mx-auto px-6 lg:px-10 pb-16">
-        <TiltCard className="card p-6 sm:p-8 fade-in" maxTilt={2}>
+      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
+        <TiltCard className="card p-4 sm:p-8 fade-in" maxTilt={2}>
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <label className="input-label">Content type</label>
@@ -109,8 +109,8 @@ export default function AIMatch() {
 
           {err && <p className="mt-4 text-sm text-red-600">{err}</p>}
 
-          <div className="mt-6 flex justify-end">
-            <button data-testid="ai-run" onClick={run} disabled={busy || !form.budget} className="btn-primary inline-flex items-center gap-2 disabled:opacity-50">
+          <div className="mt-6 flex justify-stretch sm:justify-end">
+            <button data-testid="ai-run" onClick={run} disabled={busy || !form.budget} className="btn-primary inline-flex w-full sm:w-auto items-center justify-center gap-2 disabled:opacity-50">
               {busy ? <Loader2 size={16} className="animate-spin"/> : <Wand2 size={16}/>} {busy ? "Finding editors…" : "Find my editor"}
             </button>
           </div>
@@ -123,7 +123,7 @@ export default function AIMatch() {
           <motion.section
             key="results"
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="max-w-7xl mx-auto px-6 lg:px-10 pb-24"
+            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pb-24"
           >
             <h2 className="font-heading text-2xl font-semibold text-gray-900 mb-2">Top matches</h2>
             <p className="text-sm text-gray-500 mb-6">{busy ? "Ranking verified editors…" : (matches?.length ? `${matches.length} editors matched.` : (note || "No editors matched — try widening your budget or removing motion graphics requirement."))}</p>

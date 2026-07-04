@@ -16,17 +16,17 @@ const PILLARS = [
 export default function TrustSafety() {
   return (
     <div className="fade-in">
-      <section className="max-w-5xl mx-auto px-6 lg:px-10 pt-20 pb-10 text-center">
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pt-14 sm:pt-20 pb-10 text-center">
         <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Trust & Safety</p>
-        <h1 className="font-heading text-5xl sm:text-6xl font-bold text-gray-900 mt-4 leading-tight">
+        <h1 className="font-heading text-4xl sm:text-6xl font-bold text-gray-900 mt-4 leading-tight break-words">
           A platform built like<br/>a <span className="text-neon-grad">financial product</span>.
         </h1>
-        <p className="mt-5 text-lg text-gray-600 max-w-2xl mx-auto">
+        <p className="mt-5 text-base sm:text-lg text-gray-600 max-w-2xl mx-auto">
           Eight layers of protection, from identity verification through fraud detection — so creators and editors only ever focus on the work.
         </p>
       </section>
 
-      <section className="max-w-7xl mx-auto px-6 lg:px-10 pb-20">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pb-16 sm:pb-20">
         <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {PILLARS.map((p, i) => (
             <motion.div key={p.t}
@@ -44,8 +44,8 @@ export default function TrustSafety() {
         </div>
       </section>
 
-      <section className="max-w-5xl mx-auto px-6 lg:px-10 pb-24">
-        <div className="card p-8 sm:p-10 bg-ink text-white relative overflow-hidden rounded-3xl">
+      <section className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-10 pb-20 sm:pb-24">
+        <div className="card p-6 sm:p-10 bg-ink text-white relative overflow-hidden rounded-2xl sm:rounded-3xl">
           <div className="absolute -top-24 -right-24 w-72 h-72 rounded-full" style={{ background: "radial-gradient(circle, rgba(57,255,20,0.4), transparent 70%)"}}/>
           <p className="text-xs font-bold tracking-wider uppercase text-[#DFFF00]">For our community</p>
           <h2 className="font-heading text-3xl sm:text-4xl font-semibold mt-3">Report something? Get a real human in 24h.</h2>

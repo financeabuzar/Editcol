@@ -41,7 +41,7 @@ export default function PhoneInput({ country, setCountry, phone, setPhone, testI
       </div>
 
       {open && (
-        <div className="absolute z-20 mt-2 w-80 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
+        <div className="absolute left-0 right-0 z-20 mt-2 w-full min-w-0 sm:right-auto sm:w-80 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
           <div className="p-2 border-b border-gray-100 relative">
             <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
             <input
@@ -63,7 +63,7 @@ export default function PhoneInput({ country, setCountry, phone, setPhone, testI
                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 text-left"
               >
                 <span className="text-lg">{c.flag}</span>
-                <span className="text-gray-900 flex-1">{c.name}</span>
+                <span className="text-gray-900 flex-1 min-w-0 truncate">{c.name}</span>
                 <span className="font-mono text-gray-500 text-xs">{c.dial}</span>
               </button>
             ))}
