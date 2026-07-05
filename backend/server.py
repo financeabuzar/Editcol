@@ -16,6 +16,7 @@ import base64
 import smtplib
 from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
+from html import escape
 from typing import Optional, List, Literal, Dict, Set
 
 import bcrypt
@@ -52,8 +53,8 @@ GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 print("=" * 60)
 print("GOOGLE_CLIENT_ID:", GOOGLE_CLIENT_ID)
 print("=" * 60)
-COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
-COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax").lower()
+COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() == "true"
+COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "none").lower()
 COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
 
 client = AsyncIOMotorClient(MONGO_URL)
@@ -115,9 +116,98 @@ def normalize_login_identifier(identifier: str) -> str:
 def _otp_message(code: str, purpose: str) -> str:
     return f"Your EditCol {purpose} code is {code}. It expires in {OTP_TTL_MIN} minutes."
 
+def _otp_email_html(code: str, purpose: str) -> str:
+    safe_code = escape(code)
+    safe_purpose = escape(purpose)
+    title = f"Your {safe_purpose} code"
+    preheader = f"Your EditCol {safe_purpose} code is inside. It expires in {OTP_TTL_MIN} minutes."
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EditCol {safe_purpose.title()} Code</title>
+</head>
+<body style="margin:0; padding:0; background-color:#f8fafc; font-family:'Segoe UI', Helvetica, Arial, sans-serif;">
+  <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent;">
+    {preheader}
+  </div>
+
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#f8fafc; padding:32px 0;">
+    <tr>
+      <td align="center" style="padding:0 12px;">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:100%; max-width:480px; background-color:#ffffff; border-radius:12px; overflow:hidden; box-shadow:0 1px 4px rgba(0,0,0,0.06);">
+          <tr>
+            <td style="background-color:#0A0A0A; padding:28px 32px; text-align:center;">
+              <span style="font-size:22px; font-weight:800; color:#ffffff; letter-spacing:0.3px;">
+                Edit<span style="color:#39FF14;">Col</span>
+              </span>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:36px 32px 24px 32px;">
+              <p style="margin:0 0 4px 0; font-size:14px; color:#64748b;">Hi there,</p>
+              <h1 style="margin:0 0 16px 0; font-size:20px; color:#111827;">{title}</h1>
+              <p style="margin:0 0 24px 0; font-size:14px; line-height:1.6; color:#4b5563;">
+                Use the code below to continue with your EditCol account. This code will expire in <strong>{OTP_TTL_MIN} minutes</strong>.
+              </p>
+
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding:8px 0;">
+                    <div style="display:inline-block; background-color:#f8ffdc; border:1px solid #DFFF00; border-radius:8px; padding:16px 32px; box-shadow:0 0 18px rgba(57,255,20,0.14);">
+                      <span style="font-size:32px; font-weight:800; letter-spacing:8px; color:#0A0A0A;">
+                        {safe_code}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:24px 0 0 0; font-size:13px; line-height:1.6; color:#94a3b8;">
+                Didn't request this code? You can safely ignore this email; no changes will be made to your account.
+              </p>
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:0 32px;">
+              <hr style="border:none; border-top:1px solid #e5e7eb; margin:0;">
+            </td>
+          </tr>
+
+          <tr>
+            <td style="padding:24px 32px 32px 32px; text-align:center;">
+              <p style="margin:0 0 8px 0; font-size:12px; color:#94a3b8;">
+                EditCol - Hire trusted video editors, fast.
+              </p>
+              <p style="margin:0; font-size:12px; color:#c1c5cb;">
+                Copyright 2026 EditCol. All rights reserved.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:100%; max-width:480px;">
+          <tr>
+            <td style="padding:16px 32px; text-align:center;">
+              <p style="margin:0; font-size:11px; color:#94a3b8;">
+                This is an automated message, please do not reply directly to this email.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>"""
+
 def _send_email_sync(to_email: str, code: str, purpose: str):
     subject = f"Your EditCol {purpose} code"
     text = _otp_message(code, purpose)
+    html = _otp_email_html(code, purpose)
 
     if EMAIL_PROVIDER == "resend":
         if not RESEND_API_KEY:
@@ -125,7 +215,7 @@ def _send_email_sync(to_email: str, code: str, purpose: str):
         resp = requests.post(
             "https://api.resend.com/emails",
             headers={"Authorization": f"Bearer {RESEND_API_KEY}", "Content-Type": "application/json"},
-            json={"from": EMAIL_FROM, "to": [to_email], "subject": subject, "text": text},
+            json={"from": EMAIL_FROM, "to": [to_email], "subject": subject, "text": text, "html": html},
             timeout=15,
         )
         if resp.status_code >= 400:
@@ -140,6 +230,7 @@ def _send_email_sync(to_email: str, code: str, purpose: str):
     msg["From"] = EMAIL_FROM
     msg["To"] = to_email
     msg.set_content(text)
+    msg.add_alternative(html, subtype="html")
 
     with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
         if SMTP_USE_TLS:
@@ -180,6 +271,9 @@ def with_dev_otp(payload: dict, **codes) -> dict:
     if OTP_DEV_MODE:
         payload["otp_dev"] = codes
     return payload
+
+def auth_payload(user: dict, access: str) -> dict:
+    return {"user": public_user(user), "access_token": access, "token_type": "bearer"}
 
 def _verify_google_token_sync(credential: str) -> dict:
     if not GOOGLE_CLIENT_ID:
@@ -421,7 +515,7 @@ async def register(body: RegisterIn, response: Response):
         access = create_token(user["id"], user["role"], REMEMBER_TTL_MIN)
         refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS * 1440, "refresh")
         set_auth_cookies(response, access, refresh, True)
-        return {"user": public_user(user)}
+        return auth_payload(user, access)
 
     except Exception as e:
         print("=" * 60)
@@ -471,7 +565,7 @@ async def login(body: LoginIn, request: Request, response: Response):
     access = create_token(user["id"], user["role"], ttl)
     refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS*1440, "refresh")
     set_auth_cookies(response, access, refresh, body.remember_me)
-    return {"user": public_user(user)}
+    return auth_payload(user, access)
 
 @api.post("/auth/google")
 async def google_auth(body: GoogleAuthIn, response: Response):
@@ -519,7 +613,7 @@ async def google_auth(body: GoogleAuthIn, response: Response):
     access = create_token(user["id"], user["role"], REMEMBER_TTL_MIN if body.remember_me else ACCESS_TTL_MIN)
     refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS * 1440, "refresh")
     set_auth_cookies(response, access, refresh, body.remember_me)
-    return {"user": public_user(user)}
+    return auth_payload(user, access)
 
 @api.post("/auth/verify-login-otp")
 async def verify_login_otp(body: VerifyLoginOtpIn, response: Response):
@@ -543,7 +637,7 @@ async def verify_login_otp(body: VerifyLoginOtpIn, response: Response):
     access = create_token(user["id"], user["role"], ttl)
     refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS*1440, "refresh")
     set_auth_cookies(response, access, refresh, body.remember_me)
-    return {"user": public_user(user)}
+    return auth_payload(user, access)
 
 @api.post("/auth/resend-login-otp")
 async def resend_login_otp(body: ForgotIn):
@@ -633,7 +727,7 @@ async def onboarding_role(body: OnboardingRoleIn, response: Response, user=Depen
     access = create_token(user["id"], body.role, ACCESS_TTL_MIN)
     refresh = create_token(user["id"], body.role, REFRESH_TTL_DAYS * 1440, "refresh")
     set_auth_cookies(response, access, refresh, False)
-    return {"user": public_user(user)}
+    return auth_payload(user, access)
 
 @api.put("/onboarding/profile")
 async def onboarding_profile(body: OnboardingProfileIn, user=Depends(get_current_user)):
@@ -710,7 +804,7 @@ async def verify_otp(body: VerifyOtpIn, response: Response):
         access = create_token(user["id"], user["role"], ACCESS_TTL_MIN)
         refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS * 1440, "refresh")
         set_auth_cookies(response, access, refresh, False)
-        return {"ok": True, "verified": body.type, "user": public_user(user)}
+        return {"ok": True, "verified": body.type, **auth_payload(user, access)}
     return {"ok": True, "verified": body.type}
 
 @api.post("/auth/resend-otp")
@@ -1412,7 +1506,8 @@ async def health():
 
 app.include_router(api)
 
-origins = os.environ.get('CORS_ORIGINS', '*').split(',')
+default_origins = "https://editcol.com,https://www.editcol.com,http://localhost:3000,http://127.0.0.1:3000"
+origins = [origin.strip() for origin in os.environ.get('CORS_ORIGINS', default_origins).split(',') if origin.strip()]
 app.add_middleware(CORSMiddleware,
     allow_origins=origins, allow_credentials=True,
     allow_methods=["*"], allow_headers=["*"])

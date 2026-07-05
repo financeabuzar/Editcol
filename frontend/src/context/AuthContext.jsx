@@ -7,6 +7,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);     // null = unknown/loading
   const [ready, setReady] = useState(false);
 
+  const storeAuth = (data) => {
+    if (data?.access_token) localStorage.setItem("editcol_access_token", data.access_token);
+    if (data?.user) setUser(data.user);
+    return data?.user;
+  };
+
   const refresh = useCallback(async () => {
     try {
       const { data } = await api.get("/auth/me");
@@ -23,26 +29,24 @@ export function AuthProvider({ children }) {
   const login = async (identifier, password, remember_me) => {
     const { data } = await api.post("/auth/login", { email: identifier, password, remember_me });
     if (data.login_otp_required) return data;
-    setUser(data.user);
-    return data.user;
+    return storeAuth(data);
   };
   const verifyLoginOtp = async (email, otp, remember_me) => {
     const { data } = await api.post("/auth/verify-login-otp", { email, otp, remember_me });
-    setUser(data.user);
-    return data.user;
+    return storeAuth(data);
   };
   const googleAuth = async (credential, role = "pending", remember_me = true) => {
     const { data } = await api.post("/auth/google", { credential, role, remember_me });
-    setUser(data.user);
-    return data.user;
+    return storeAuth(data);
   };
   const register = async (payload) => {
     const { data } = await api.post("/auth/register", payload);
-    if (data.user) setUser(data.user);
+    storeAuth(data);
     return data;
   };
   const logout = async () => {
     try { await api.post("/auth/logout"); } catch {}
+    localStorage.removeItem("editcol_access_token");
     setUser(false);
   };
 
