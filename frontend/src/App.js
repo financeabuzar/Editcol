@@ -16,6 +16,7 @@ import Register from "@/pages/Register";
 import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
+import VerifyAccount from "@/pages/VerifyAccount";
 import EditorOnboarding from "@/pages/EditorOnboarding";
 import Onboarding from "@/pages/Onboarding";
 import Messages from "@/pages/Messages";
@@ -74,6 +75,7 @@ export default function App() {
               <Route path="/become-editor" element={<PrivatePage><BecomeEditor/></PrivatePage>} />
               <Route path="/onboarding" element={<PrivatePage><Onboarding/></PrivatePage>} />
               <Route path="/dashboard" element={<PrivatePage><Dashboard/></PrivatePage>} />
+              <Route path="/verify" element={<PrivatePage><VerifyAccount/></PrivatePage>} />
               <Route path="/editor/onboarding" element={<PrivatePage role="editor"><EditorOnboarding/></PrivatePage>} />
               <Route path="/messages" element={<PrivatePage><Messages/></PrivatePage>} />
               <Route path="/admin" element={<PrivatePage role="admin"><Admin/></PrivatePage>} />

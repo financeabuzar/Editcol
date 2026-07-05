@@ -34,7 +34,7 @@ export default function Dashboard() {
           <div className="flex-1 text-sm text-amber-900">
             Verify your {!user.email_verified && "email"}{!user.email_verified && !user.phone_verified && " and "}{!user.phone_verified && "phone"} to unlock all features.
           </div>
-          <Link to="/register" className="text-sm font-semibold text-amber-900 hover:underline whitespace-nowrap">Verify now →</Link>
+          <Link to="/verify" className="text-sm font-semibold text-amber-900 hover:underline whitespace-nowrap">Verify now →</Link>
         </div>
       )}
 
