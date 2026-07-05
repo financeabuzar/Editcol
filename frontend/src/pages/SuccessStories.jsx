@@ -33,7 +33,7 @@ export default function SuccessStories() {
               <Link to="/ai-match" data-testid="ss-aimatch" className="btn-primary inline-flex items-center justify-center gap-2">
                 <Sparkles size={16}/> Start a project
               </Link>
-              <Link to="/register?role=editor" data-testid="ss-join-editor" className="btn-outline text-center">
+              <Link to="/register" data-testid="ss-join-editor" className="btn-outline text-center">
                 Join as editor
               </Link>
             </div>

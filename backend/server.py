@@ -212,11 +212,20 @@ async def ensure_editor_profile(user: dict):
         "bio": "",
         "skills": [],
         "portfolio": [],
+        "portfolio_links": {},
+        "portfolio_videos": [],
+        "proof_videos": [],
         "hourly_rate": None,
         "starting_price": None,
+        "currency": "INR",
         "location": None,
         "languages": [],
         "software": [],
+        "categories": [],
+        "experience_level": None,
+        "years_experience": None,
+        "availability": None,
+        "verification_status": "Pending Review",
         "avatar": user.get("avatar"),
         "is_public": False,
         "badges": [],
@@ -237,10 +246,12 @@ async def ensure_editor_profile(user: dict):
 def public_user(u: dict) -> dict:
     return {
         "id": u["id"], "email": u["email"], "name": u["name"], "phone": u.get("phone"),
-        "role": u["role"], "email_verified": u.get("email_verified", False),
+        "role": u.get("role", "pending"), "email_verified": u.get("email_verified", False),
         "phone_verified": u.get("phone_verified", False),
         "avatar": u.get("avatar"), "created_at": u.get("created_at"),
         "status": u.get("status", "active"),
+        "profile_completed": u.get("profile_completed", False),
+        "onboarding_completed": u.get("onboarding_completed", False),
     }
 
 async def get_current_user(request: Request) -> dict:
@@ -277,7 +288,7 @@ class RegisterIn(BaseModel):
     email: EmailStr
     phone: str
     password: str = Field(min_length=6)
-    role: Literal["client", "editor"]
+    role: Literal["pending", "client", "editor"] = "pending"
 
 class LoginIn(BaseModel):
     email: str
@@ -286,8 +297,14 @@ class LoginIn(BaseModel):
 
 class GoogleAuthIn(BaseModel):
     credential: str
-    role: Literal["client", "editor"] = "client"
+    role: Literal["pending", "client", "editor"] = "pending"
     remember_me: bool = True
+
+class OnboardingRoleIn(BaseModel):
+    role: Literal["client", "editor"]
+
+class OnboardingProfileIn(BaseModel):
+    data: Dict = Field(default_factory=dict)
 
 class VerifyOtpIn(BaseModel):
     email: EmailStr
@@ -382,9 +399,11 @@ async def register(body: RegisterIn, response: Response):
             "email": email,
             "phone": phone,
             "password_hash": hash_password(body.password),
-            "role": body.role,
+            "role": "pending",
             "email_verified": False,
             "phone_verified": False,
+            "profile_completed": False,
+            "onboarding_completed": False,
             "status": "active",
             "created_at": now_utc().isoformat(),
             "avatar": None,
@@ -393,36 +412,6 @@ async def register(body: RegisterIn, response: Response):
         print("Before insert user")
         await db.users.insert_one(user)
         print("User inserted")
-
-        if body.role == "editor":
-            print("Creating editor profile...")
-            await db.editors.insert_one({
-                "id": uid,
-                "user_id": uid,
-                "bio": "",
-                "skills": [],
-                "portfolio": [],
-                "hourly_rate": None,
-                "starting_price": None,
-                "location": None,
-                "languages": [],
-                "software": [],
-                "avatar": None,
-                "is_public": False,
-                "badges": [],
-                "trust_score": {
-                    "completion_rate": 0,
-                    "response_rate": 0,
-                    "on_time_delivery_rate": 0,
-                    "satisfaction": 0,
-                },
-                "stats": {
-                    "projects_completed": 0,
-                    "total_reviews": 0,
-                    "avg_rating": 0,
-                },
-                "created_at": now_utc().isoformat(),
-            })
 
         email_otp = gen_otp()
         phone_otp = gen_otp()
@@ -530,10 +519,6 @@ async def google_auth(body: GoogleAuthIn, response: Response):
             updates["avatar"] = avatar
         await db.users.update_one({"id": user["id"]}, {"$set": updates})
         user = await db.users.find_one({"id": user["id"]})
-        if body.role == "editor" and user["role"] == "client":
-            await db.users.update_one({"id": user["id"]}, {"$set": {"role": "editor"}})
-            user["role"] = "editor"
-            await ensure_editor_profile(user)
     else:
         user = {
             "id": str(uuid.uuid4()),
@@ -541,9 +526,11 @@ async def google_auth(body: GoogleAuthIn, response: Response):
             "email": email,
             "phone": None,
             "password_hash": "",
-            "role": body.role,
+            "role": "pending",
             "email_verified": True,
             "phone_verified": False,
+            "profile_completed": False,
+            "onboarding_completed": False,
             "status": "active",
             "created_at": now_utc().isoformat(),
             "avatar": avatar,
@@ -551,8 +538,6 @@ async def google_auth(body: GoogleAuthIn, response: Response):
             "auth_provider": "google",
         }
         await db.users.insert_one(user)
-        if body.role == "editor":
-            await ensure_editor_profile(user)
 
     access = create_token(user["id"], user["role"], REMEMBER_TTL_MIN if body.remember_me else ACCESS_TTL_MIN)
     refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS * 1440, "refresh")
@@ -637,6 +622,73 @@ async def logout(response: Response, user=Depends(get_current_user)):
 @api.get("/auth/me")
 async def me(user=Depends(get_current_user)):
     return public_user(user)
+
+@api.get("/onboarding/me")
+async def onboarding_me(user=Depends(get_current_user)):
+    client_profile = await db.client_profiles.find_one({"user_id": user["id"]}, {"_id": 0})
+    editor_profile = await db.editors.find_one({"user_id": user["id"]}, {"_id": 0})
+    return {
+        "user": public_user(user),
+        "client_profile": client_profile,
+        "editor_profile": editor_profile,
+    }
+
+@api.post("/onboarding/role")
+async def onboarding_role(body: OnboardingRoleIn, response: Response, user=Depends(get_current_user)):
+    updates = {"role": body.role, "onboarding_started": True, "updated_at": now_utc().isoformat()}
+    await db.users.update_one({"id": user["id"]}, {"$set": updates})
+    user = {**user, **updates}
+    if body.role == "editor":
+        await ensure_editor_profile(user)
+    else:
+        await db.client_profiles.update_one(
+            {"user_id": user["id"]},
+            {"$setOnInsert": {"user_id": user["id"], "created_at": now_utc().isoformat()},
+             "$set": {"updated_at": now_utc().isoformat()}},
+            upsert=True,
+        )
+    access = create_token(user["id"], body.role, ACCESS_TTL_MIN)
+    refresh = create_token(user["id"], body.role, REFRESH_TTL_DAYS * 1440, "refresh")
+    set_auth_cookies(response, access, refresh, False)
+    return {"user": public_user(user)}
+
+@api.put("/onboarding/profile")
+async def onboarding_profile(body: OnboardingProfileIn, user=Depends(get_current_user)):
+    if user.get("role") not in ("client", "editor"):
+        raise HTTPException(400, "Choose a role first")
+    data = dict(body.data or {})
+    avatar = data.get("avatar") or data.get("avatar_b64")
+    if avatar:
+        await db.users.update_one({"id": user["id"]}, {"$set": {"avatar": avatar}})
+    data["updated_at"] = now_utc().isoformat()
+    if user["role"] == "client":
+        data["user_id"] = user["id"]
+        await db.client_profiles.update_one(
+            {"user_id": user["id"]},
+            {"$setOnInsert": {"created_at": now_utc().isoformat()}, "$set": data},
+            upsert=True,
+        )
+        return {"ok": True, "client_profile": await db.client_profiles.find_one({"user_id": user["id"]}, {"_id": 0})}
+    await ensure_editor_profile(user)
+    data.setdefault("verification_status", "Pending Review")
+    await db.editors.update_one({"user_id": user["id"]}, {"$set": data})
+    return {"ok": True, "editor_profile": await db.editors.find_one({"user_id": user["id"]}, {"_id": 0})}
+
+@api.post("/onboarding/complete")
+async def onboarding_complete(user=Depends(get_current_user)):
+    if user.get("role") not in ("client", "editor"):
+        raise HTTPException(400, "Choose a role first")
+    if user["role"] == "editor":
+        await db.editors.update_one(
+            {"user_id": user["id"]},
+            {"$set": {"verification_status": "Pending Verification", "is_public": False, "updated_at": now_utc().isoformat()}},
+        )
+    await db.users.update_one(
+        {"id": user["id"]},
+        {"$set": {"profile_completed": True, "onboarding_completed": True, "updated_at": now_utc().isoformat()}},
+    )
+    updated = await db.users.find_one({"id": user["id"]})
+    return {"user": public_user(updated)}
 
 @api.post("/auth/refresh")
 async def refresh_token(request: Request, response: Response):
@@ -1391,6 +1443,7 @@ async def startup():
     await db.users.create_index("id", unique=True)
     await db.editors.create_index("id", unique=True)
     await db.editors.create_index("user_id", unique=True)
+    await db.client_profiles.create_index("user_id", unique=True)
     await db.otp_codes.create_index("email")
     await db.password_reset_tokens.create_index("token", unique=True)
     await db.login_attempts.create_index("identifier")
@@ -1413,6 +1466,7 @@ async def startup():
             "id": str(uuid.uuid4()), "email": email, "name": name, "phone": "+10000000000",
             "password_hash": hash_password(pw), "role": "admin",
             "email_verified": True, "phone_verified": True, "status": "active",
+            "profile_completed": True, "onboarding_completed": True,
             "created_at": now_utc().isoformat(),
         })
         log.info(f"Admin seeded: {email}")

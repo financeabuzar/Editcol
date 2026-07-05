@@ -30,7 +30,7 @@ export default function Home() {
   }, []);
 
   const becomeEditorTarget = () => {
-    if (!user || user === false) return nav("/register?role=editor");
+    if (!user || user === false) return nav("/register");
     if (user.role === "editor") return nav("/editor/onboarding");
     if (user.role === "admin") return nav("/admin");
     return nav("/become-editor");

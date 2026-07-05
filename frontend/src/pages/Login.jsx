@@ -19,6 +19,10 @@ export default function Login() {
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
 
   const goAfterLogin = useCallback((u) => {
+    if (u.role !== "admin" && !u.onboarding_completed) {
+      nav("/onboarding");
+      return;
+    }
     const dest = u.role === "admin" ? "/admin" : "/dashboard";
     nav(loc.state?.from || dest);
   }, [loc.state?.from, nav]);
@@ -26,7 +30,7 @@ export default function Login() {
   const handleGoogle = useCallback(async (credential) => {
     setBusy(true); setErr("");
     try {
-      const u = await googleAuth(credential, "client", remember);
+      const u = await googleAuth(credential, "pending", remember);
       goAfterLogin(u);
     } catch (e) { setErr(formatApiError(e)); }
     finally { setBusy(false); }

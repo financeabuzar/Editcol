@@ -17,6 +17,7 @@ import ForgotPassword from "@/pages/ForgotPassword";
 import ResetPassword from "@/pages/ResetPassword";
 import Dashboard from "@/pages/Dashboard";
 import EditorOnboarding from "@/pages/EditorOnboarding";
+import Onboarding from "@/pages/Onboarding";
 import Messages from "@/pages/Messages";
 import Admin from "@/pages/Admin";
 import LegalPage from "@/pages/Legal";
@@ -27,7 +28,7 @@ import AIMatch from "@/pages/AIMatch";
 import BecomeEditor from "@/pages/BecomeEditor";
 import ErrorPage from "@/pages/ErrorPage";
 
-const HIDE_CHROME = ["/login", "/register", "/forgot-password", "/reset-password"];
+const HIDE_CHROME = ["/login", "/register", "/onboarding", "/forgot-password", "/reset-password"];
 
 function Shell({ children }) {
   const loc = useLocation();
@@ -71,6 +72,7 @@ export default function App() {
               <Route path="/reset-password" element={<ResetPassword/>} />
 
               <Route path="/become-editor" element={<PrivatePage><BecomeEditor/></PrivatePage>} />
+              <Route path="/onboarding" element={<PrivatePage><Onboarding/></PrivatePage>} />
               <Route path="/dashboard" element={<PrivatePage><Dashboard/></PrivatePage>} />
               <Route path="/editor/onboarding" element={<PrivatePage role="editor"><EditorOnboarding/></PrivatePage>} />
               <Route path="/messages" element={<PrivatePage><Messages/></PrivatePage>} />

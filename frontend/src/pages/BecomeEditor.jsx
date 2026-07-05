@@ -9,7 +9,7 @@ import { CheckCircle2, Wand2, Briefcase, Loader2 } from "lucide-react";
 
 /**
  * "Become an editor" flow for users who are already logged in.
- *   - If not logged in → redirects to /register?role=editor
+ *   - If not logged in → redirects to universal signup
  *   - If logged in as client → upgrades the role to editor (creates editor doc) and goes to onboarding
  *   - If already editor / admin → just goes to onboarding
  */
@@ -23,7 +23,7 @@ export default function BecomeEditor() {
   useEffect(() => {
     if (!ready) return;
     if (user === false) {
-      nav("/register?role=editor", { replace: true });
+      nav("/register", { replace: true });
     } else if (user && (user.role === "editor" || user.role === "admin")) {
       nav("/editor/onboarding", { replace: true });
     }

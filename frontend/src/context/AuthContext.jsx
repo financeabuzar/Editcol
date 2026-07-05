@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
     setUser(data.user);
     return data.user;
   };
-  const googleAuth = async (credential, role = "client", remember_me = true) => {
+  const googleAuth = async (credential, role = "pending", remember_me = true) => {
     const { data } = await api.post("/auth/google", { credential, role, remember_me });
     setUser(data.user);
     return data.user;

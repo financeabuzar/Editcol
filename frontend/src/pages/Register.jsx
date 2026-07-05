@@ -1,5 +1,5 @@
 import { useCallback, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/context/AuthContext";
 import api, { formatApiError } from "@/lib/api";
@@ -13,12 +13,10 @@ import { Loader2, CheckCircle2, Mail, Phone as PhoneIcon, ArrowRight } from "luc
 export default function Register() {
   const { register, refresh, googleAuth } = useAuth();
   const nav = useNavigate();
-  const [sp] = useSearchParams();
-  const initialRole = sp.get("role") === "editor" ? "editor" : "client";
 
   // step: 1 = account, 2 = email otp, 3 = phone otp, 4 = done
   const [step, setStep] = useState(1);
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: initialRole });
+  const [form, setForm] = useState({ name: "", email: "", password: "" });
   const [country, setCountry] = useState(COUNTRIES[0]);
   const [phone, setPhone] = useState("");
   const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
@@ -29,10 +27,7 @@ export default function Register() {
 
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }));
   const fullPhone = `${country.dial}${phone}`;
-  const finish = useCallback((roleOverride) => {
-    const role = typeof roleOverride === "string" ? roleOverride : form.role;
-    nav(role === "editor" ? "/editor/onboarding" : "/dashboard");
-  }, [form.role, nav]);
+  const finish = useCallback(() => nav("/onboarding"), [nav]);
 
   const submit = async (e) => {
     e?.preventDefault();
@@ -49,19 +44,22 @@ export default function Register() {
   const handleGoogle = useCallback(async (credential) => {
     setBusy(true); setErr("");
     try {
-      const u = await googleAuth(credential, form.role, true);
-      finish(u.role);
+      await googleAuth(credential, "pending", true);
+      finish();
     } catch (e) { setErr(formatApiError(e)); }
     finally { setBusy(false); }
-  }, [finish, form.role, googleAuth]);
+  }, [finish, googleAuth]);
 
   const verify = async (type) => {
     const otp = type === "email" ? emailOtp : phoneOtp;
     try {
       await api.post("/auth/verify-otp", { email: form.email, otp, type });
       if (type === "email") { setEmailVerified(true); setStep(3); }
-      else { setPhoneVerified(true); setStep(4); }
-      if (type === "phone") await refresh();
+      else {
+        setPhoneVerified(true);
+        await refresh();
+        nav("/onboarding", { replace: true });
+      }
     } catch (e) { alert(formatApiError(e)); }
   };
 
@@ -118,15 +116,6 @@ export default function Register() {
                 transition={{ duration: 0.25 }}
                 className="space-y-4" data-testid="register-form">
                 <h1 className="font-heading text-3xl font-bold text-gray-900">Create your account</h1>
-
-                <div className="grid grid-cols-2 gap-2 p-1 bg-gray-100 rounded-full">
-                  {["client","editor"].map(r => (
-                    <button type="button" key={r} onClick={()=>set("role", r)} data-testid={`role-${r}`}
-                      className={`text-sm py-2 rounded-full font-semibold transition-all ${form.role===r ? "bg-ink text-white" : "text-gray-700"}`}>
-                      I'm {r === "editor" ? "an" : "a"} {r}
-                    </button>
-                  ))}
-                </div>
 
                 <GoogleAuthButton onCredential={handleGoogle} text="signup_with" disabled={busy} />
                 <div className="flex items-center gap-3 text-xs text-gray-400">
