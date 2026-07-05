@@ -5,6 +5,8 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import uuid
 import json
 import secrets
@@ -47,6 +49,9 @@ TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+print("=" * 60)
+print("GOOGLE_CLIENT_ID:", GOOGLE_CLIENT_ID)
+print("=" * 60)
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "false").lower() == "true"
 COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "lax").lower()
 COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
@@ -252,6 +257,8 @@ def public_user(u: dict) -> dict:
         "status": u.get("status", "active"),
         "profile_completed": u.get("profile_completed", False),
         "onboarding_completed": u.get("onboarding_completed", False),
+        "can_hire": u.get("can_hire", u.get("role") in ("client", "editor", "admin")),
+        "can_edit": u.get("can_edit", u.get("role") in ("editor", "admin")),
     }
 
 async def get_current_user(request: Request) -> dict:
@@ -383,8 +390,6 @@ async def register(body: RegisterIn, response: Response):
         email = body.email.lower().strip()
         phone = normalize_phone(body.phone)
 
-        print("Incoming body:", body.model_dump())
-
         if await db.users.find_one({"email": email}):
             raise HTTPException(400, "Email already registered")
 
@@ -400,53 +405,23 @@ async def register(body: RegisterIn, response: Response):
             "phone": phone,
             "password_hash": hash_password(body.password),
             "role": "pending",
-            "email_verified": False,
-            "phone_verified": False,
+            "email_verified": True,
+            "phone_verified": True,
             "profile_completed": False,
             "onboarding_completed": False,
+            "can_hire": True,
+            "can_edit": False,
             "status": "active",
             "created_at": now_utc().isoformat(),
             "avatar": None,
         }
 
-        print("Before insert user")
         await db.users.insert_one(user)
-        print("User inserted")
 
-        email_otp = gen_otp()
-        phone_otp = gen_otp()
-
-        expires = (now_utc() + timedelta(minutes=OTP_TTL_MIN)).isoformat()
-
-        print("Saving OTP...")
-
-        await db.otp_codes.insert_many([
-            {
-                "user_id": uid,
-                "email": email,
-                "type": "email",
-                "code": email_otp,
-                "expires_at": expires,
-                "used": False,
-            },
-            {
-                "user_id": uid,
-                "email": email,
-                "type": "phone",
-                "code": phone_otp,
-                "expires_at": expires,
-                "used": False,
-            },
-        ])
-
-        await send_otp(email, email_otp, "email", "verification")
-        await send_otp(phone, phone_otp, "phone", "verification")
-
-        print("Register Success")
-
-        return with_dev_otp({
-            "user": public_user(user),
-        }, email_otp=email_otp, phone_otp=phone_otp)
+        access = create_token(user["id"], user["role"], REMEMBER_TTL_MIN)
+        refresh = create_token(user["id"], user["role"], REFRESH_TTL_DAYS * 1440, "refresh")
+        set_auth_cookies(response, access, refresh, True)
+        return {"user": public_user(user)}
 
     except Exception as e:
         print("=" * 60)
@@ -531,6 +506,8 @@ async def google_auth(body: GoogleAuthIn, response: Response):
             "phone_verified": False,
             "profile_completed": False,
             "onboarding_completed": False,
+            "can_hire": True,
+            "can_edit": False,
             "status": "active",
             "created_at": now_utc().isoformat(),
             "avatar": avatar,
@@ -635,7 +612,13 @@ async def onboarding_me(user=Depends(get_current_user)):
 
 @api.post("/onboarding/role")
 async def onboarding_role(body: OnboardingRoleIn, response: Response, user=Depends(get_current_user)):
-    updates = {"role": body.role, "onboarding_started": True, "updated_at": now_utc().isoformat()}
+    updates = {
+        "role": body.role,
+        "can_hire": True,
+        "can_edit": body.role == "editor",
+        "onboarding_started": True,
+        "updated_at": now_utc().isoformat(),
+    }
     await db.users.update_one({"id": user["id"]}, {"$set": updates})
     user = {**user, **updates}
     if body.role == "editor":
@@ -1466,6 +1449,7 @@ async def startup():
             "id": str(uuid.uuid4()), "email": email, "name": name, "phone": "+10000000000",
             "password_hash": hash_password(pw), "role": "admin",
             "email_verified": True, "phone_verified": True, "status": "active",
+            "can_hire": True, "can_edit": True,
             "profile_completed": True, "onboarding_completed": True,
             "created_at": now_utc().isoformat(),
         })

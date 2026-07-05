@@ -76,10 +76,10 @@ export default function Home() {
             </p>
             <div className="mt-8 sm:mt-9 flex flex-col sm:flex-row sm:flex-wrap gap-3">
               <Link to="/ai-match" data-testid="hero-aimatch-btn" className="btn-primary inline-flex items-center justify-center gap-2">
-                <Wand2 size={16} /> Find my editor <ArrowRight size={16} />
+                <Wand2 size={16} /> Find an Editor <ArrowRight size={16} />
               </Link>
-              <Link to="/browse" data-testid="hero-browse-btn" className="btn-dark text-center">Browse editors</Link>
-              <button onClick={becomeEditorTarget} data-testid="hero-join-btn" className="btn-outline">Become an editor</button>
+              <button onClick={becomeEditorTarget} data-testid="hero-join-btn" className="btn-dark">Become an Editor</button>
+              <Link to="/register" data-testid="hero-browse-btn" className="btn-outline text-center">Get Started</Link>
             </div>
             <div className="mt-8 sm:mt-10 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-3 sm:gap-6 text-sm text-gray-500">
               <div className="flex items-center gap-2"><ShieldCheck size={16} className="text-[#39FF14]" /> Identity-verified editors</div>
@@ -284,14 +284,15 @@ export default function Home() {
             Start your next project with a verified editor today.
           </h2>
           <div className="mt-8 flex flex-col sm:flex-row sm:flex-wrap gap-3">
-            <Link to="/ai-match" className="btn-primary text-center">Find my editor</Link>
+            <Link to="/ai-match" className="btn-primary text-center">Find an Editor</Link>
             <button
               onClick={becomeEditorTarget}
               className="btn-outline"
               style={{ background: "transparent", color: "white", borderColor: "rgba(255,255,255,0.2)" }}
             >
-              Become an editor
+              Become an Editor
             </button>
+            <Link to="/register" className="btn-outline text-center" style={{ background: "transparent", color: "white", borderColor: "rgba(255,255,255,0.2)" }}>Get Started</Link>
           </div>
         </TiltCard>
       </section>
