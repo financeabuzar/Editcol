@@ -45,6 +45,7 @@ SMTP_HOST = os.environ.get("SMTP_HOST")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
 SMTP_USER = os.environ.get("SMTP_USER")
 SMTP_PASSWORD = os.environ.get("SMTP_PASSWORD")
+SMTP_USE_SSL = os.environ.get("SMTP_USE_SSL", "true" if SMTP_PORT == 465 else "false").lower() == "true"
 SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
 TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
@@ -232,8 +233,9 @@ def _send_email_sync(to_email: str, code: str, purpose: str):
     msg.set_content(text)
     msg.add_alternative(html, subtype="html")
 
-    with smtplib.SMTP(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
-        if SMTP_USE_TLS:
+    smtp_cls = smtplib.SMTP_SSL if SMTP_USE_SSL else smtplib.SMTP
+    with smtp_cls(SMTP_HOST, SMTP_PORT, timeout=15) as smtp:
+        if SMTP_USE_TLS and not SMTP_USE_SSL:
             smtp.starttls()
         if SMTP_USER and SMTP_PASSWORD:
             smtp.login(SMTP_USER, SMTP_PASSWORD)
