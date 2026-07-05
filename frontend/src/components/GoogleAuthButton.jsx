@@ -28,6 +28,7 @@ export default function GoogleAuthButton({ onCredential, text = "continue_with",
   const ref = useRef(null);
   const [ready, setReady] = useState(false);
   const clientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+  const label = text === "signup_with" ? "Sign up with Google" : "Continue with Google";
 
   useEffect(() => {
     if (!clientId || disabled) return;
@@ -57,9 +58,14 @@ export default function GoogleAuthButton({ onCredential, text = "continue_with",
 
   if (!clientId) {
     return (
-      <div className="text-xs text-gray-500 text-center">
-        Add REACT_APP_GOOGLE_CLIENT_ID to enable Google sign-in.
-      </div>
+      <button
+        type="button"
+        disabled
+        className="w-full h-11 rounded-full border border-gray-300 bg-white text-gray-700 font-semibold text-sm opacity-70 cursor-not-allowed"
+        title="Add REACT_APP_GOOGLE_CLIENT_ID in the frontend deployment environment and rebuild."
+      >
+        {label}
+      </button>
     );
   }
 
