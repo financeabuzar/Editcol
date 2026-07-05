@@ -1,6 +1,6 @@
 import axios from "axios";
 
-export const BACKEND_URL ="https://editcol-production.up.railway.app";
+export const BACKEND_URL = process.env.REACT_APP_API_URL || "https://api.editcol.com";
 export const API_BASE = `${BACKEND_URL}/api`;
 export const WS_URL = BACKEND_URL.replace(/^http/, "ws") + "/api/ws";
 
