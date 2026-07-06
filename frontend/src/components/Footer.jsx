@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import Logo from "@/components/Logo";
-import { Twitter, Instagram, Mail } from "lucide-react";
+import { Twitter, Instagram, Mail, ArrowRight } from "lucide-react";
 
 const SOCIAL_LINKS = [
   { Icon: Instagram, href: "https://www.instagram.com/editcol_insta/", label: "EditCol on Instagram" },
@@ -10,59 +10,65 @@ const SOCIAL_LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="mt-16 sm:mt-24 bg-ink text-gray-300">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-12 sm:py-14 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-8 sm:gap-10">
-        <div className="sm:col-span-2">
-          <Logo size="md" as="div" />
-          <p className="mt-5 max-w-sm text-sm text-gray-400 leading-relaxed">
-            EditCol is the premium marketplace for hiring verified video editors.
-            Trust scores, real reviews, and transparent workflows — built for serious creators.
-          </p>
-          <div className="mt-6 flex gap-3">
-            {SOCIAL_LINKS.map(({ Icon, href, label }) => (
-              <a key={href} href={href} aria-label={label} target="_blank" rel="noreferrer" className="w-9 h-9 rounded-full border border-white/10 flex items-center justify-center hover:border-[#39FF14] hover:text-white" style={{ borderColor: "rgba(255,255,255,0.1)" }}>
-                <Icon size={16} />
-              </a>
-            ))}
+    <footer className="relative mt-24 overflow-hidden border-t border-white/[0.08] bg-[#050505] text-[#a0a0a0] cinema-noise">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#7c5cff] to-transparent" />
+      <div className="premium-shell py-14 sm:py-18">
+        <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
+          <div>
+            <Logo size="md" as="div" />
+            <h2 className="mt-8 max-w-3xl text-4xl font-semibold leading-[0.98] text-white sm:text-6xl">
+              Ready to create your next viral video?
+            </h2>
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+              <Link to="/browse" className="btn-primary">Hire an Editor <ArrowRight size={16} /></Link>
+              <Link to="/register" className="btn-outline">Become an Editor</Link>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-8 sm:grid-cols-3">
+            <FooterGroup title="Platform" links={[
+              ["/browse", "Marketplace"],
+              ["/how-it-works", "Workflow"],
+              ["/trust", "Trust"],
+              ["/success-stories", "Stories"],
+            ]} />
+            <FooterGroup title="Legal" links={[
+              ["/legal/terms", "Terms"],
+              ["/legal/privacy", "Privacy"],
+              ["/legal/cookies", "Cookies"],
+              ["/legal/refund", "Refunds"],
+            ]} />
+            <div>
+              <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-white">Social</p>
+              <div className="flex gap-2">
+                {SOCIAL_LINKS.map(({ Icon, href, label }) => (
+                  <a key={href} href={href} aria-label={label} target="_blank" rel="noreferrer" className="grid h-10 w-10 place-items-center rounded-full border border-white/[0.1] transition hover:border-[#43d9ff] hover:text-white">
+                    <Icon size={16} />
+                  </a>
+                ))}
+              </div>
+              <a href="mailto:official@editcol.com" className="mt-4 block text-sm transition hover:text-white">official@editcol.com</a>
+            </div>
           </div>
         </div>
 
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-white mb-4">Platform</p>
-          <ul className="space-y-2 text-sm text-gray-400">
-            <li><Link to="/browse" className="hover:text-white">Browse Editors</Link></li>
-            <li><Link to="/how-it-works" className="hover:text-white">How It Works</Link></li>
-            <li><Link to="/trust" className="hover:text-white">Trust & Safety</Link></li>
-            <li><Link to="/register" className="hover:text-white">Become an Editor</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-white mb-4">Legal</p>
-          <ul className="space-y-2 text-sm text-gray-400">
-            <li><Link to="/legal/terms" data-testid="footer-terms" className="hover:text-white">Terms of Service</Link></li>
-            <li><Link to="/legal/privacy" data-testid="footer-privacy" className="hover:text-white">Privacy Policy</Link></li>
-            <li><Link to="/legal/cookies" data-testid="footer-cookies" className="hover:text-white">Cookie Policy</Link></li>
-            <li><Link to="/legal/refund" data-testid="footer-refund" className="hover:text-white">Refund Policy</Link></li>
-            <li><Link to="/legal/community" data-testid="footer-community" className="hover:text-white">Community Guidelines</Link></li>
-          </ul>
-        </div>
-
-        <div>
-          <p className="text-xs font-bold uppercase tracking-wider text-white mb-4">Support</p>
-          <ul className="space-y-2 text-sm text-gray-400">
-            <li><a href="mailto:official@editcol.com" className="hover:text-white">official@editcol.com</a></li>
-            <li><Link to="/trust" className="hover:text-white">Report a Problem</Link></li>
-          </ul>
-        </div>
-      </div>
-
-      <div className="border-t border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-5 flex flex-col md:flex-row justify-between items-center gap-3 text-xs text-gray-500 text-center md:text-left">
+        <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/[0.08] pt-5 text-xs text-[#6f6f6f] md:flex-row">
           <p>© {new Date().getFullYear()} EditCol. All rights reserved.</p>
-          <p>Crafted with neon and discipline.</p>
+          <p>Elite editing talent, curated for serious creators.</p>
         </div>
       </div>
     </footer>
+  );
+}
+
+function FooterGroup({ title, links }) {
+  return (
+    <div>
+      <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-white">{title}</p>
+      <ul className="space-y-2 text-sm">
+        {links.map(([to, label]) => (
+          <li key={to}><Link to={to} className="transition hover:text-white">{label}</Link></li>
+        ))}
+      </ul>
+    </div>
   );
 }

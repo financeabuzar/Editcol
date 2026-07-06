@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { motion } from "framer-motion";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import TrustBadges from "@/components/TrustBadges";
-import { MessageSquare, Briefcase, MapPin, Star, Flag, ShieldAlert, UserX, X, Loader2 } from "lucide-react";
+import { MessageSquare, Briefcase, MapPin, Star, Flag, ShieldAlert, UserX, X, Loader2, Play, Calendar, BadgeCheck } from "lucide-react";
 
 export default function EditorProfile() {
   const { id } = useParams();
@@ -42,119 +43,124 @@ export default function EditorProfile() {
     alert("User blocked.");
   };
 
-  if (loading) return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20 text-gray-500">Loading…</div>;
-  if (!editor) return <div className="max-w-7xl mx-auto px-4 sm:px-6 py-20">Editor not found.</div>;
+  if (loading) return <div className="premium-shell py-24 text-[#a0a0a0]">Loading editor profile...</div>;
+  if (!editor) return <div className="premium-shell py-24 text-white">Editor not found.</div>;
 
   const ts = editor.trust_score || {};
+  const heroImage = editor.avatar || "https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?auto=format&fit=crop&w=1300&q=80";
 
   return (
-    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-10 sm:py-12 grid lg:grid-cols-[360px,1fr] gap-8 lg:gap-10">
-      {/* Sidebar */}
-      <aside className="lg:sticky lg:top-24 self-start space-y-6">
-        <div className="card p-6">
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full overflow-hidden bg-gray-100">
-              {editor.avatar
-                ? <img src={editor.avatar} alt={editor.name} className="w-full h-full object-cover" />
-                : <div className="w-full h-full flex items-center justify-center text-2xl font-heading text-gray-400">{editor.name?.[0]}</div>}
+    <div className="fade-in">
+      <section className="relative overflow-hidden border-b border-white/[0.08] bg-[#050505] cinema-noise">
+        <img src={heroImage} alt="" className="absolute inset-0 h-full w-full object-cover opacity-24 blur-sm scale-105" />
+        <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/78 to-[#050505]/40" />
+        <div className="premium-shell relative grid gap-10 py-14 sm:py-20 lg:grid-cols-[1fr_360px] lg:items-end">
+          <div>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="badge badge-elite">Available this week</span>
+              {editor.location && <span className="inline-flex items-center gap-1 text-sm text-[#a0a0a0]"><MapPin size={14}/> {editor.location}</span>}
             </div>
-            <div className="min-w-0">
-              <p className="font-semibold text-lg text-gray-900 break-words" data-testid="editor-name">{editor.name}</p>
-              {editor.location && <p className="text-xs text-gray-500 flex items-center gap-1 mt-1"><MapPin size={12}/> {editor.location}</p>}
-            </div>
-          </div>
-          <div className="mt-4"><TrustBadges badges={editor.badges} /></div>
-
-          <p className="mt-4 text-sm text-gray-700">Starting from</p>
-          <p className="font-heading text-3xl font-bold">${editor.starting_price ?? "—"}</p>
-
-          <div className="mt-5 space-y-2.5">
-            <button onClick={onMessage} data-testid="msg-editor-btn" className="w-full btn-dark inline-flex items-center justify-center gap-2">
-              <MessageSquare size={16}/> Message Editor
-            </button>
-            <button onClick={() => requireAuth() && setShowHire(true)} data-testid="hire-editor-btn" className="w-full btn-primary inline-flex items-center justify-center gap-2">
-              <Briefcase size={16}/> Hire For Project
-            </button>
-          </div>
-
-          <div className="mt-5 pt-5 border-t border-gray-200 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-            <button onClick={() => requireAuth() && setShowReport("profile")} data-testid="report-profile-btn" className="text-gray-500 hover:text-gray-900 inline-flex items-center gap-1.5"><Flag size={12}/> Report Profile</button>
-            <button onClick={() => requireAuth() && setShowReport("scam")} data-testid="report-scam-btn" className="text-red-600 hover:text-red-700 inline-flex items-center gap-1.5"><ShieldAlert size={12}/> Report Scam</button>
-            <button onClick={onBlock} data-testid="block-user-btn" className="col-span-2 text-gray-500 hover:text-gray-900 inline-flex items-center gap-1.5"><UserX size={12}/> Block User</button>
-          </div>
-        </div>
-
-        <div className="card-hover card p-6">
-          <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Trust Score</p>
-          <div className="mt-4 space-y-3">
-            <TrustBar label="Completion rate" value={ts.completion_rate || 0} />
-            <TrustBar label="Response rate" value={ts.response_rate || 0} />
-            <TrustBar label="On-time delivery" value={ts.on_time_delivery_rate || 0} />
-            <TrustBar label="Client satisfaction" value={ts.satisfaction || 0} />
-          </div>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <main className="space-y-10">
-        <section>
-          <h2 className="font-heading text-2xl font-semibold text-gray-900">About</h2>
-          <p className="mt-3 text-gray-600 leading-relaxed">{editor.bio || "No bio yet."}</p>
-
-          {editor.skills?.length > 0 && (
+            <h1 className="mt-5 max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.025em] text-white sm:text-7xl" data-testid="editor-name">{editor.name}</h1>
+            <p className="section-copy mt-5 max-w-2xl">{editor.bio || "Elite video editor focused on story, pacing, sound, and platform-native delivery."}</p>
             <div className="mt-6 flex flex-wrap gap-2">
-              {editor.skills.map(s => <span key={s} className="text-xs px-3 py-1.5 rounded-full bg-gray-100 text-gray-700">{s}</span>)}
+              {(editor.skills || []).slice(0, 8).map(s => <span key={s} className="rounded-full border border-white/[0.1] bg-white/[0.04] px-3 py-1.5 text-xs font-bold text-white">{s}</span>)}
             </div>
-          )}
-          {editor.software?.length > 0 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {editor.software.map(s => <span key={s} className="text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-700">{s}</span>)}
-            </div>
-          )}
-        </section>
+          </div>
 
-        <section>
-          <h2 className="font-heading text-2xl font-semibold text-gray-900">Portfolio</h2>
-          {editor.portfolio?.length ? (
-            <div className="mt-4 grid sm:grid-cols-2 gap-4">
-              {editor.portfolio.map((p, i) => (
-                <div key={i} className="card overflow-hidden">
-                  {p.thumbnail_b64
-                    ? <img src={p.thumbnail_b64} alt={p.title} className="h-48 w-full object-cover" />
-                    : <div className="h-48 bg-gray-100 flex items-center justify-center text-gray-300 font-heading text-xl">No preview</div>}
-                  <div className="p-4">
-                    <p className="font-semibold text-gray-900">{p.title}</p>
-                    {p.description && <p className="text-sm text-gray-500 mt-1 line-clamp-2">{p.description}</p>}
-                    {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="text-xs text-neon-grad font-semibold mt-2 inline-block">Open project →</a>}
-                  </div>
-                </div>
-              ))}
+          <aside className="card p-5 lg:sticky lg:top-24">
+            <div className="flex items-center gap-4">
+              <div className="h-16 w-16 overflow-hidden rounded-full border border-white/[0.12] bg-white/[0.05]">
+                {editor.avatar ? <img src={editor.avatar} alt={editor.name} className="h-full w-full object-cover" /> : <div className="grid h-full place-items-center text-2xl font-black text-white/40">{editor.name?.[0]}</div>}
+              </div>
+              <div>
+                <p className="text-sm text-[#a0a0a0]">Starting from</p>
+                <p className="text-3xl font-black text-white">${editor.starting_price ?? "-"}</p>
+              </div>
             </div>
-          ) : <p className="mt-3 text-gray-500 text-sm">No portfolio items yet.</p>}
-        </section>
+            <div className="mt-4"><TrustBadges badges={editor.badges} /></div>
+            <div className="mt-5 grid gap-2">
+              <button onClick={() => requireAuth() && setShowHire(true)} data-testid="hire-editor-btn" className="btn-primary w-full"><Briefcase size={16}/> Hire For Project</button>
+              <button onClick={onMessage} data-testid="msg-editor-btn" className="btn-outline w-full"><MessageSquare size={16}/> Message Editor</button>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 border-t border-white/[0.08] pt-4 text-xs">
+              <button onClick={() => requireAuth() && setShowReport("profile")} data-testid="report-profile-btn" className="inline-flex items-center gap-1.5 text-[#a0a0a0] hover:text-white"><Flag size={12}/> Report</button>
+              <button onClick={() => requireAuth() && setShowReport("scam")} data-testid="report-scam-btn" className="inline-flex items-center gap-1.5 text-red-300 hover:text-red-200"><ShieldAlert size={12}/> Scam</button>
+              <button onClick={onBlock} data-testid="block-user-btn" className="col-span-2 inline-flex items-center gap-1.5 text-[#a0a0a0] hover:text-white"><UserX size={12}/> Block User</button>
+            </div>
+          </aside>
+        </div>
+      </section>
 
-        <section>
-          <h2 className="font-heading text-2xl font-semibold text-gray-900">Reviews</h2>
-          {editor.reviews?.length ? (
-            <div className="mt-4 space-y-4">
-              {editor.reviews.map(r => (
-                <div key={r.id} className="card p-5">
-                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
-                    <div>
-                      <p className="font-semibold text-gray-900">{r.client_name}</p>
-                      <div className="flex items-center gap-0.5 mt-1">
-                        {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} className={i < r.rating ? "text-amber-500 fill-amber-500" : "text-gray-300"} />)}
-                      </div>
+      <div className="premium-shell grid gap-8 py-10 sm:py-14 lg:grid-cols-[1fr_360px]">
+        <main className="space-y-10">
+          <section>
+            <p className="eyebrow">Portfolio</p>
+            {editor.portfolio?.length ? (
+              <div className="mt-5 grid gap-5 sm:grid-cols-2">
+                {editor.portfolio.map((p, i) => (
+                  <motion.article key={i} whileHover={{ y: -6 }} className="card overflow-hidden">
+                    <div className="relative h-64">
+                      {p.thumbnail_b64 ? <img src={p.thumbnail_b64} alt={p.title} className="h-full w-full object-cover opacity-85" /> : <div className="grid h-full place-items-center bg-white/[0.04] text-white/25">No preview</div>}
+                      <div className="absolute inset-0 grid place-items-center bg-black/20"><span className="grid h-12 w-12 place-items-center rounded-full bg-white text-black"><Play size={16} fill="currentColor" /></span></div>
                     </div>
-                    {r.verified_purchase && <span className="badge badge-verified">Verified purchase</span>}
-                  </div>
-                  <p className="mt-3 text-gray-700">{r.comment}</p>
-                </div>
-              ))}
+                    <div className="p-5">
+                      <p className="text-xl font-bold text-white">{p.title}</p>
+                      {p.description && <p className="mt-2 line-clamp-2 text-sm leading-6 text-[#a0a0a0]">{p.description}</p>}
+                      {p.url && <a href={p.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-block text-sm font-bold text-[#43d9ff]">Open project</a>}
+                    </div>
+                  </motion.article>
+                ))}
+              </div>
+            ) : (
+              <div className="card mt-5 p-8 text-[#a0a0a0]">No portfolio items yet.</div>
+            )}
+          </section>
+
+          <section>
+            <p className="eyebrow">Reviews</p>
+            {editor.reviews?.length ? (
+              <div className="mt-5 space-y-4">
+                {editor.reviews.map(r => (
+                  <article key={r.id} className="card p-5">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div>
+                        <p className="font-bold text-white">{r.client_name}</p>
+                        <div className="mt-1 flex items-center gap-0.5">
+                          {Array.from({ length: 5 }).map((_, i) => <Star key={i} size={14} className={i < r.rating ? "fill-[#43d9ff] text-[#43d9ff]" : "text-white/18"} />)}
+                        </div>
+                      </div>
+                      {r.verified_purchase && <span className="badge badge-verified"><BadgeCheck size={13} /> Verified purchase</span>}
+                    </div>
+                    <p className="mt-4 leading-7 text-[#d6d6d6]">{r.comment}</p>
+                  </article>
+                ))}
+              </div>
+            ) : <div className="card mt-5 p-8 text-[#a0a0a0]">No reviews yet.</div>}
+          </section>
+        </main>
+
+        <aside className="space-y-5 lg:sticky lg:top-24 self-start">
+          <div className="card p-5">
+            <p className="eyebrow">Trust Score</p>
+            <div className="mt-5 space-y-4">
+              <TrustBar label="Completion rate" value={ts.completion_rate || 0} />
+              <TrustBar label="Response rate" value={ts.response_rate || 0} />
+              <TrustBar label="On-time delivery" value={ts.on_time_delivery_rate || 0} />
+              <TrustBar label="Client satisfaction" value={ts.satisfaction || 0} />
             </div>
-          ) : <p className="mt-3 text-gray-500 text-sm">No reviews yet.</p>}
-        </section>
-      </main>
+          </div>
+          <div className="card p-5">
+            <p className="eyebrow">Software</p>
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(editor.software?.length ? editor.software : ["Premiere Pro", "After Effects", "DaVinci Resolve"]).map(s => <span key={s} className="rounded-full border border-white/[0.1] px-3 py-1.5 text-xs text-[#d6d6d6]">{s}</span>)}
+            </div>
+          </div>
+          <div className="card p-5">
+            <p className="flex items-center gap-2 text-sm font-bold text-white"><Calendar size={16} className="text-[#43d9ff]" /> Booking window</p>
+            <p className="mt-2 text-sm leading-6 text-[#a0a0a0]">Send a brief with budget, deadline, footage size, and format. Strong briefs get faster replies.</p>
+          </div>
+        </aside>
+      </div>
 
       {showHire && <HireDialog editor={editor} onClose={() => setShowHire(false)} />}
       {showReport && <ReportDialog kind={showReport} targetId={editor.user_id} onClose={() => setShowReport(false)} />}
@@ -165,9 +171,9 @@ export default function EditorProfile() {
 function TrustBar({ label, value }) {
   return (
     <div>
-      <div className="flex justify-between text-xs"><span className="text-gray-500">{label}</span><span className="text-gray-900 font-semibold">{value}%</span></div>
-      <div className="mt-1.5 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-        <div className="h-full bg-neon-grad rounded-full" style={{ width: `${value}%` }} />
+      <div className="flex justify-between text-xs"><span className="text-[#a0a0a0]">{label}</span><span className="font-bold text-white">{value}%</span></div>
+      <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+        <div className="h-full rounded-full bg-neon-grad" style={{ width: `${value}%` }} />
       </div>
     </div>
   );
@@ -186,15 +192,14 @@ function HireDialog({ editor, onClose }) {
     setBusy(true); setErr("");
     try {
       const deadline = form.deadline === "custom" ? form.customDate : form.deadline;
-      const { data } = await api.post("/projects", {
+      await api.post("/projects", {
         editor_id: editor.id, title: form.title, description: form.description,
         content_type: form.content_type, editing_style: form.editing_style,
         motion_graphics: form.motion_graphics, footage_size: form.footage_size,
         budget: Number(form.budget), deadline,
       });
-      alert("Project request sent — opening chat.");
+      alert("Project request sent - opening chat.");
       onClose();
-      // Start conversation
       const conv = await api.post("/conversations/start", { user_id: editor.user_id });
       nav(`/messages?c=${conv.data.id}`);
     } catch (e) { setErr(formatApiError(e)); }
@@ -202,83 +207,41 @@ function HireDialog({ editor, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 scroll-area" data-testid="hire-modal">
-        <div className="flex justify-between items-start gap-3 mb-4">
-          <div className="min-w-0">
-            <p className="text-xs font-bold tracking-wider uppercase text-gray-500">Project request</p>
-            <h3 className="font-heading text-2xl font-semibold text-gray-900">Hire {editor.name}</h3>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur">
+      <div className="card max-h-[90vh] w-full max-w-2xl overflow-y-auto p-5 sm:p-6 scroll-area" data-testid="hire-modal">
+        <div className="mb-5 flex items-start justify-between gap-3">
+          <div>
+            <p className="eyebrow">Project request</p>
+            <h3 className="mt-2 text-3xl font-black text-white">Hire {editor.name}</h3>
           </div>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-900"><X size={20}/></button>
+          <button onClick={onClose} className="text-[#a0a0a0] hover:text-white"><X size={20}/></button>
         </div>
 
         <div className="space-y-4">
-          <div>
-            <label className="input-label">Project title</label>
-            <input data-testid="proj-title" className="input" value={form.title} onChange={e=>set("title", e.target.value)} placeholder="e.g. YouTube intro video edit"/>
+          <Field label="Project title"><input data-testid="proj-title" className="input" value={form.title} onChange={e=>set("title", e.target.value)} placeholder="e.g. YouTube launch film"/></Field>
+          <Field label="Description"><textarea data-testid="proj-desc" rows={4} className="input" value={form.description} onChange={e=>set("description", e.target.value)} placeholder="What do you need delivered?"/></Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Content type"><select data-testid="proj-content" className="input" value={form.content_type} onChange={e=>set("content_type", e.target.value)}>{["YouTube","Reels/Shorts","Wedding","Corporate","Documentary","Podcast","Ad/Commercial","Other"].map(o=><option key={o}>{o}</option>)}</select></Field>
+            <Field label="Editing style"><select data-testid="proj-style" className="input" value={form.editing_style} onChange={e=>set("editing_style", e.target.value)}>{["Cinematic","Fast-paced","Vlog","Documentary","Minimal","Trendy/Viral","Other"].map(o=><option key={o}>{o}</option>)}</select></Field>
+            <label className="flex items-center gap-2 pt-7 text-sm text-[#d6d6d6]"><input id="mg" data-testid="proj-mg" type="checkbox" checked={form.motion_graphics} onChange={e=>set("motion_graphics", e.target.checked)} className="h-4 w-4 accent-[#7c5cff]" /> Motion graphics required</label>
+            <Field label="Footage size"><select data-testid="proj-size" className="input" value={form.footage_size} onChange={e=>set("footage_size", e.target.value)}>{["< 5GB","< 10GB","10-50GB","50-200GB","> 200GB"].map(o=><option key={o}>{o}</option>)}</select></Field>
+            <Field label="Budget ($)"><input data-testid="proj-budget" type="number" className="input" value={form.budget} onChange={e=>set("budget", e.target.value)} placeholder="500" /></Field>
+            <Field label="Deadline"><select data-testid="proj-deadline" className="input" value={form.deadline} onChange={e=>set("deadline", e.target.value)}><option value="24h">24 Hours</option><option value="3d">3 Days</option><option value="7d">7 Days</option><option value="14d">14 Days</option><option value="30d">30 Days</option><option value="custom">Custom Date</option></select></Field>
+            {form.deadline === "custom" && <Field label="Custom date"><input data-testid="proj-custom-date" type="date" className="input" value={form.customDate} onChange={e=>set("customDate", e.target.value)} /></Field>}
           </div>
-          <div>
-            <label className="input-label">Description</label>
-            <textarea data-testid="proj-desc" rows={4} className="input" value={form.description} onChange={e=>set("description", e.target.value)} placeholder="What do you need delivered?"/>
-          </div>
-          <div className="grid sm:grid-cols-2 gap-4">
-            <div>
-              <label className="input-label">Content type</label>
-              <select data-testid="proj-content" className="input" value={form.content_type} onChange={e=>set("content_type", e.target.value)}>
-                {["YouTube","Reels/Shorts","Wedding","Corporate","Documentary","Podcast","Ad/Commercial","Other"].map(o=><option key={o}>{o}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="input-label">Editing style</label>
-              <select data-testid="proj-style" className="input" value={form.editing_style} onChange={e=>set("editing_style", e.target.value)}>
-                {["Cinematic","Fast-paced","Vlog","Documentary","Minimal","Trendy/Viral","Other"].map(o=><option key={o}>{o}</option>)}
-              </select>
-            </div>
-            <div className="flex items-center gap-2 pt-7">
-              <input id="mg" data-testid="proj-mg" type="checkbox" checked={form.motion_graphics} onChange={e=>set("motion_graphics", e.target.checked)} className="w-4 h-4 accent-[#39FF14]" />
-              <label htmlFor="mg" className="text-sm text-gray-700">Motion graphics required</label>
-            </div>
-            <div>
-              <label className="input-label">Footage size</label>
-              <select data-testid="proj-size" className="input" value={form.footage_size} onChange={e=>set("footage_size", e.target.value)}>
-                {["< 5GB","< 10GB","10-50GB","50-200GB","> 200GB"].map(o=><option key={o}>{o}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="input-label">Budget ($)</label>
-              <input data-testid="proj-budget" type="number" className="input" value={form.budget} onChange={e=>set("budget", e.target.value)} placeholder="500" />
-            </div>
-            <div>
-              <label className="input-label">Deadline</label>
-              <select data-testid="proj-deadline" className="input" value={form.deadline} onChange={e=>set("deadline", e.target.value)}>
-                <option value="24h">24 Hours</option>
-                <option value="3d">3 Days</option>
-                <option value="7d">7 Days</option>
-                <option value="14d">14 Days</option>
-                <option value="30d">30 Days</option>
-                <option value="custom">Custom Date</option>
-              </select>
-            </div>
-            {form.deadline === "custom" && (
-              <div>
-                <label className="input-label">Custom date</label>
-                <input data-testid="proj-custom-date" type="date" className="input" value={form.customDate} onChange={e=>set("customDate", e.target.value)} />
-              </div>
-            )}
-          </div>
-
-          {err && <p className="text-sm text-red-600">{err}</p>}
-
-          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 pt-2">
+          {err && <p className="text-sm text-red-300">{err}</p>}
+          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
             <button onClick={onClose} className="btn-outline">Cancel</button>
-            <button onClick={submit} disabled={busy || !form.title || !form.budget} data-testid="proj-submit" className="btn-primary inline-flex items-center justify-center gap-2 disabled:opacity-50">
-              {busy && <Loader2 size={16} className="animate-spin" />} Send project request
-            </button>
+            <button onClick={submit} disabled={busy || !form.title || !form.budget} data-testid="proj-submit" className="btn-primary disabled:opacity-50">{busy && <Loader2 size={16} className="animate-spin" />} Send project request</button>
           </div>
         </div>
       </div>
     </div>
   );
+}
+
+function Field({ label, children }) {
+  return <div><label className="input-label">{label}</label>{children}</div>;
 }
 
 function ReportDialog({ kind, targetId, onClose }) {
@@ -290,14 +253,14 @@ function ReportDialog({ kind, targetId, onClose }) {
     finally { setBusy(false); }
   };
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl w-full max-w-md p-4 sm:p-6" data-testid="report-modal">
-        <div className="flex justify-between items-start gap-3 mb-3">
-          <h3 className="font-heading text-xl font-semibold text-gray-900">Report — {kind === "scam" ? "Scam" : "Profile"}</h3>
-          <button onClick={onClose}><X size={18}/></button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur">
+      <div className="card w-full max-w-md p-5 sm:p-6" data-testid="report-modal">
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h3 className="text-2xl font-black text-white">Report {kind === "scam" ? "Scam" : "Profile"}</h3>
+          <button onClick={onClose} className="text-[#a0a0a0]"><X size={18}/></button>
         </div>
-        <textarea data-testid="report-reason" rows={4} className="input" placeholder="Describe the issue…" value={reason} onChange={e=>setReason(e.target.value)} />
-        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-4">
+        <textarea data-testid="report-reason" rows={4} className="input" placeholder="Describe the issue..." value={reason} onChange={e=>setReason(e.target.value)} />
+        <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <button onClick={onClose} className="btn-outline">Cancel</button>
           <button onClick={submit} disabled={busy || !reason} data-testid="report-submit" className="btn-primary">Submit report</button>
         </div>

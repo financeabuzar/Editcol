@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { motion } from "framer-motion";
 import api from "@/lib/api";
 import { EditorMiniCard } from "@/pages/Home";
-import { Search, Filter } from "lucide-react";
+import { Search, Filter, SlidersHorizontal, Sparkles } from "lucide-react";
 
 const SKILLS = ["Color Grading", "Motion Graphics", "VFX", "Sound Design", "Editing", "Animation", "Reels", "YouTube", "Wedding", "Corporate"];
 const BADGE_FILTERS = [
@@ -35,61 +36,106 @@ export default function BrowseEditors() {
   useEffect(() => { fetchEditors(); /* eslint-disable-next-line */ }, [skill, badge, maxPrice]);
 
   return (
-    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-10 sm:py-12">
-      <h1 className="font-heading text-3xl sm:text-4xl font-bold text-gray-900">Browse editors</h1>
-      <p className="mt-2 text-gray-500">All editors are identity-verified. Filter by skill, badge, or price.</p>
+    <div className="fade-in">
+      <section className="relative overflow-hidden border-b border-white/[0.08] bg-[#050505] py-14 sm:py-20 cinema-noise">
+        <div className="absolute inset-0 bg-grid" />
+        <div className="premium-shell relative">
+          <p className="eyebrow">Marketplace</p>
+          <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_24rem] lg:items-end">
+            <div>
+              <h1 className="max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.025em] text-white sm:text-7xl">
+                Browse editors with proof, taste, and availability.
+              </h1>
+              <p className="section-copy mt-6 max-w-2xl">
+                Search portfolios like Behance, book like a modern marketplace, and filter by the signals that matter before a deadline.
+              </p>
+            </div>
+            <div className="card p-4">
+              <div className="flex items-center gap-3">
+                <Sparkles className="text-[#43d9ff]" size={18} />
+                <div>
+                  <p className="text-sm font-bold text-white">Live marketplace</p>
+                  <p className="text-xs text-[#a0a0a0]">{loading ? "Scanning editors" : `${editors.length} matching editors`}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
-      <div className="mt-8 grid lg:grid-cols-[280px,1fr] gap-8">
-        <aside className="space-y-6 lg:sticky lg:top-24 self-start">
-          <div className="card p-4 sm:p-5">
-            <label className="input-label">Search</label>
-            <div className="relative">
-              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-              <input data-testid="filter-search" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&fetchEditors()} placeholder="Search by name…" className="input pl-9" />
+      <div className="premium-shell py-8 sm:py-12">
+        <div className="grid gap-8 lg:grid-cols-[300px,1fr]">
+          <aside className="space-y-4 lg:sticky lg:top-24 self-start">
+            <div className="card p-5">
+              <div className="mb-5 flex items-center justify-between">
+                <p className="text-sm font-bold text-white">Filters</p>
+                <SlidersHorizontal size={16} className="text-[#a0a0a0]" />
+              </div>
+              <label className="input-label">Search</label>
+              <div className="relative">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777]" />
+                <input data-testid="filter-search" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&fetchEditors()} placeholder="Editor, format, style..." className="input pl-9" />
+              </div>
+              <button onClick={fetchEditors} className="btn-primary mt-3 w-full">Search</button>
             </div>
-          </div>
-          <div className="card p-4 sm:p-5">
-            <p className="input-label">Badge</p>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={()=>setBadge("")} className={`text-xs px-3 py-1.5 rounded-full border ${!badge?"bg-ink text-white border-ink":"border-gray-200"}`}>All</button>
-              {BADGE_FILTERS.map(b => (
-                <button key={b.v} data-testid={`filter-badge-${b.v}`} onClick={()=>setBadge(b.v)} className={`text-xs px-3 py-1.5 rounded-full border ${badge===b.v?"bg-ink text-white border-ink":"border-gray-200"}`}>{b.l}</button>
-              ))}
-            </div>
-          </div>
-          <div className="card p-4 sm:p-5">
-            <p className="input-label">Skill</p>
-            <div className="flex flex-wrap gap-2">
-              <button onClick={()=>setSkill("")} className={`text-xs px-3 py-1.5 rounded-full border ${!skill?"bg-ink text-white border-ink":"border-gray-200"}`}>Any</button>
-              {SKILLS.map(s => (
-                <button key={s} onClick={()=>setSkill(s)} className={`text-xs px-3 py-1.5 rounded-full border ${skill===s?"bg-ink text-white border-ink":"border-gray-200"}`}>{s}</button>
-              ))}
-            </div>
-          </div>
-          <div className="card p-4 sm:p-5">
-            <label className="input-label">Max price ($)</label>
-            <input data-testid="filter-max-price" type="number" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} className="input" placeholder="e.g. 500" />
-          </div>
-        </aside>
 
-        <main>
-          {loading ? (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {[1,2,3,4,5,6].map(i => <div key={i} className="card overflow-hidden"><div className="skeleton h-44"/><div className="p-5 space-y-2"><div className="skeleton h-4 w-2/3"/><div className="skeleton h-3 w-full"/></div></div>)}
+            <FilterGroup title="Badge">
+              <Chip active={!badge} onClick={()=>setBadge("")}>All</Chip>
+              {BADGE_FILTERS.map(b => <Chip key={b.v} active={badge===b.v} onClick={()=>setBadge(b.v)} testId={`filter-badge-${b.v}`}>{b.l}</Chip>)}
+            </FilterGroup>
+
+            <FilterGroup title="Skill">
+              <Chip active={!skill} onClick={()=>setSkill("")}>Any</Chip>
+              {SKILLS.map(s => <Chip key={s} active={skill===s} onClick={()=>setSkill(s)}>{s}</Chip>)}
+            </FilterGroup>
+
+            <div className="card p-5">
+              <label className="input-label">Max price ($)</label>
+              <input data-testid="filter-max-price" type="number" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)} className="input" placeholder="500" />
             </div>
-          ) : editors.length === 0 ? (
-            <div className="card p-6 sm:p-12 text-center">
-              <Filter size={28} className="mx-auto text-gray-300" />
-              <p className="font-heading text-2xl mt-4 text-gray-900">No editors match your filters</p>
-              <p className="mt-2 text-gray-500 text-sm">Try removing filters — or be the first editor to join.</p>
-            </div>
-          ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {editors.map(e => <EditorMiniCard key={e.id} editor={e} />)}
-            </div>
-          )}
-        </main>
+          </aside>
+
+          <main>
+            {loading ? (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {[1,2,3,4,5,6].map(i => <div key={i} className="card overflow-hidden"><div className="skeleton h-72"/><div className="p-5 space-y-3"><div className="skeleton h-5 w-2/3"/><div className="skeleton h-3 w-full"/><div className="skeleton h-3 w-1/2"/></div></div>)}
+              </div>
+            ) : editors.length === 0 ? (
+              <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="card p-10 text-center">
+                <Filter size={30} className="mx-auto text-[#43d9ff]" />
+                <p className="mt-4 text-3xl font-black text-white">No editors match this cut.</p>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-[#a0a0a0]">Remove a filter or search for a broader format. The best portfolios sometimes hide behind fewer constraints.</p>
+              </motion.div>
+            ) : (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {editors.map((e, i) => <EditorMiniCard key={e.id} editor={e} index={i} />)}
+              </div>
+            )}
+          </main>
+        </div>
       </div>
     </div>
+  );
+}
+
+function FilterGroup({ title, children }) {
+  return (
+    <div className="card p-5">
+      <p className="input-label">{title}</p>
+      <div className="flex flex-wrap gap-2">{children}</div>
+    </div>
+  );
+}
+
+function Chip({ active, onClick, children, testId }) {
+  return (
+    <button
+      type="button"
+      data-testid={testId}
+      onClick={onClick}
+      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${active ? "border-[#43d9ff]/50 bg-[#43d9ff]/12 text-white" : "border-white/[0.1] text-[#a0a0a0] hover:border-white/25 hover:text-white"}`}
+    >
+      {children}
+    </button>
   );
 }

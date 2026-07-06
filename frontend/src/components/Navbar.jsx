@@ -1,37 +1,37 @@
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useState } from "react";
-import { Menu, X, MessageCircle, LayoutDashboard, Shield } from "lucide-react";
+import { Menu, X, MessageCircle, LayoutDashboard, Shield, Sparkles } from "lucide-react";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/context/AuthContext";
-import ThemeToggle from "@/components/ThemeToggle";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const nav = useNavigate();
 
-  const appLinks = [
-    { to: "/browse", label: "Browse Editors" },
-    { to: "/how-it-works", label: "How It Works" },
+  const links = [
+    { to: "/browse", label: "Marketplace" },
+    { to: "/success-stories", label: "Showcase" },
+    { to: "/how-it-works", label: "Workflow" },
+    { to: "/trust", label: "Trust" },
     { to: "/ai-match", label: "AI Match" },
-    { to: "/trust", label: "Trust & Safety" },
-    { to: "/success-stories", label: "Success Stories" },
   ];
   const isLoggedIn = user && user !== false;
-  const links = appLinks;
-
   const onLogout = async () => { await logout(); nav("/"); };
 
   return (
-    <header className="sticky top-0 z-40 bg-ink/95 backdrop-blur supports-[backdrop-filter]:bg-ink/80" style={{ background: "rgba(10,10,10,0.92)", backdropFilter: "blur(10px)" }}>
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 h-16 flex items-center justify-between gap-3 text-white">
-        <div className="flex min-w-0 items-center gap-10">
+    <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#050505]/82 backdrop-blur-xl">
+      <div className="premium-shell h-16 flex items-center justify-between gap-3 text-white">
+        <div className="flex min-w-0 items-center gap-8">
           <Logo size="md" />
-          <nav className="hidden md:flex items-center gap-4 lg:gap-7 text-sm">
+          <nav className="hidden lg:flex items-center gap-1 rounded-full border border-white/[0.08] bg-white/[0.035] p-1 text-sm">
             {links.map((l) => (
               <NavLink
-                key={l.to} to={l.to} data-testid={`nav-${l.to.replace(/\//g,"")}`}
-                className={({isActive}) => `transition-colors hover:text-white ${isActive ? "text-white" : "text-gray-400"}`}>
+                key={l.to}
+                to={l.to}
+                data-testid={`nav-${l.to.replace(/\//g,"")}`}
+                className={({isActive}) => `rounded-full px-3.5 py-2 transition-colors ${isActive ? "bg-white text-black" : "text-[#a0a0a0] hover:text-white"}`}
+              >
                 {l.label}
               </NavLink>
             ))}
@@ -39,28 +39,29 @@ export default function Navbar() {
         </div>
 
         <div className="hidden md:flex items-center gap-3">
-          <ThemeToggle />
           {isLoggedIn ? (
             <>
-              <Link to="/messages" data-testid="nav-messages" className="text-gray-300 hover:text-white p-2 rounded-full hover:bg-white/5">
+              <Link to="/messages" data-testid="nav-messages" className="rounded-full border border-white/[0.08] p-2 text-[#a0a0a0] transition hover:border-white/20 hover:text-white">
                 <MessageCircle size={18} />
               </Link>
-              <Link to="/dashboard" data-testid="nav-dashboard" className="text-sm text-gray-300 hover:text-white flex items-center gap-2">
+              <Link to="/dashboard" data-testid="nav-dashboard" className="btn-outline !min-h-10 !px-4">
                 <LayoutDashboard size={16} /> Dashboard
               </Link>
               {user.role === "admin" && (
-                <Link to="/admin" data-testid="nav-admin" className="text-sm text-gray-300 hover:text-white flex items-center gap-2">
+                <Link to="/admin" data-testid="nav-admin" className="btn-outline !min-h-10 !px-4">
                   <Shield size={16}/> Admin
                 </Link>
               )}
-              <button onClick={onLogout} data-testid="nav-logout" className="btn-primary text-sm">
+              <button onClick={onLogout} data-testid="nav-logout" className="btn-primary !min-h-10 !px-4">
                 Logout
               </button>
             </>
           ) : (
             <>
-              <Link to="/login" data-testid="nav-login" className="text-sm text-gray-300 hover:text-white">Sign in</Link>
-              <Link to="/register" data-testid="nav-register" className="btn-primary text-sm">Get Started</Link>
+              <Link to="/login" data-testid="nav-login" className="text-sm font-semibold text-[#a0a0a0] transition hover:text-white">Sign in</Link>
+              <Link to="/register" data-testid="nav-register" className="btn-primary !min-h-10 !px-4">
+                <Sparkles size={16} /> Get Started
+              </Link>
             </>
           )}
         </div>
@@ -68,7 +69,7 @@ export default function Navbar() {
         <button
           onClick={() => setOpen(!open)}
           data-testid="nav-menu-toggle"
-          className="md:hidden text-white p-2 -mr-2 rounded-full hover:bg-white/10"
+          className="md:hidden rounded-full border border-white/10 p-2 text-white"
           aria-expanded={open}
           aria-label="Toggle navigation menu"
         >
@@ -77,25 +78,24 @@ export default function Navbar() {
       </div>
 
       {open && (
-        <div className="md:hidden bg-ink text-white px-4 sm:px-6 pb-5 space-y-3 border-t border-white/10 max-h-[calc(100vh-4rem)] overflow-y-auto scroll-area">
+        <div className="md:hidden border-t border-white/[0.08] bg-[#050505] px-4 pb-5 pt-3 text-white">
           {links.map((l) => (
-            <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block py-2 text-gray-300">{l.label}</Link>
+            <Link key={l.to} to={l.to} onClick={() => setOpen(false)} className="block rounded-lg px-2 py-3 text-[#d6d6d6]">
+              {l.label}
+            </Link>
           ))}
-          <div className="pt-3 border-t border-white/10 flex flex-col gap-2">
-            <ThemeToggle className="w-full justify-center" />
+          <div className="mt-3 grid gap-2 border-t border-white/[0.08] pt-4">
             {isLoggedIn ? (
               <>
-                <Link to="/messages" onClick={()=>setOpen(false)} className="btn-outline text-center">Messages</Link>
-                <Link to="/dashboard" onClick={()=>setOpen(false)} className="btn-outline text-center">Dashboard</Link>
-                {user.role === "admin" && (
-                  <Link to="/admin" onClick={()=>setOpen(false)} className="btn-outline text-center">Admin</Link>
-                )}
+                <Link to="/messages" onClick={()=>setOpen(false)} className="btn-outline">Messages</Link>
+                <Link to="/dashboard" onClick={()=>setOpen(false)} className="btn-outline">Dashboard</Link>
+                {user.role === "admin" && <Link to="/admin" onClick={()=>setOpen(false)} className="btn-outline">Admin</Link>}
                 <button onClick={()=>{ setOpen(false); onLogout(); }} className="btn-primary">Logout</button>
               </>
             ) : (
               <>
-                <Link to="/login" onClick={()=>setOpen(false)} className="btn-outline text-center">Sign in</Link>
-                <Link to="/register" onClick={()=>setOpen(false)} className="btn-primary text-center">Get Started</Link>
+                <Link to="/login" onClick={()=>setOpen(false)} className="btn-outline">Sign in</Link>
+                <Link to="/register" onClick={()=>setOpen(false)} className="btn-primary">Get Started</Link>
               </>
             )}
           </div>
