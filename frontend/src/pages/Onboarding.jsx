@@ -80,14 +80,14 @@ function isUrl(value) {
 }
 
 async function videosFromFiles(files, existing = []) {
-  const selected = Array.from(files || []).slice(0, Math.max(0, 10 - existing.length));
+  const selected = Array.from(files || []).slice(0, 1);
   const items = [];
   for (const file of selected) {
     if (!/\.(mp4|mov)$/i.test(file.name)) throw new Error("Videos must be MP4 or MOV files.");
     const src = await readFile(file, 500);
     items.push({ name: file.name, size: file.size, src });
   }
-  return [...existing, ...items].slice(0, 10);
+  return items.slice(0, 1);
 }
 
 function TextInput({ label, value, onChange, placeholder, type = "text", invalid }) {
@@ -262,8 +262,8 @@ export default function Onboarding() {
     setErr("");
     try {
       if (role === "editor" && roleStep === 8) {
-        const count = (editorForm.portfolio_videos || []).length;
-        if (count < 3) throw new Error("Upload at least 3 videos.");
+      const count = (editorForm.portfolio_videos || []).length;
+      if (count < 1) throw new Error("Upload at least 1 video.");
       }
       if (roleStep === totalRoleSteps - 1) {
         await persistProfile();
@@ -548,15 +548,25 @@ function EditorStep({ step, form, setForm, toggle }) {
       title: "Upload Your Best Work",
       content: (
         <WizardCard>
-          <p className="text-gray-300">Minimum 3 videos. Maximum 10 videos.</p>
+          <p className="text-gray-300"> Upload 1 portfolio video.</p>
           <p className="mt-2 text-sm text-gray-500">Supported: MP4, MOV. Max 500MB each.</p>
           <label className="mt-5 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#39FF14]/40 bg-[#39FF14]/5 p-5 text-center text-sm text-gray-300 hover:bg-[#39FF14]/10">
             <UploadCloud className="mb-2 text-[#39FF14]" /> Upload videos
-            <input hidden type="file" accept=".mp4,.mov,video/mp4,video/quicktime" multiple onChange={async (e) => setForm({ portfolio_videos: await videosFromFiles(e.target.files, form.portfolio_videos || []) })} />
+            <input
+  hidden
+  type="file"
+  accept=".mp4,.mov,video/mp4,video/quicktime"
+  onChange={async (e) => {
+    const videos = await videosFromFiles(e.target.files, []);
+    setForm({
+      portfolio_videos: videos.slice(0, 1),
+    });
+  }}
+/>
           </label>
           <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
             <span>{(form.portfolio_videos || []).length}/10 uploaded</span>
-            <span>{(form.portfolio_videos || []).length >= 3 ? "Ready" : "Need at least 3"}</span>
+            <span>{(form.portfolio_videos || []).length >= 1 ? "Ready" : "Need at least 1"}</span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {(form.portfolio_videos || []).map((video, index) => (
