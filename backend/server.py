@@ -423,6 +423,9 @@ class ResendOtpIn(BaseModel):
     email: EmailStr
     type: Literal["email", "phone"]
 
+class UpdatePhoneIn(BaseModel):
+    phone: str
+
 class ForgotIn(BaseModel):
     email: EmailStr
 
@@ -695,6 +698,22 @@ async def logout(response: Response, user=Depends(get_current_user)):
 @api.get("/auth/me")
 async def me(user=Depends(get_current_user)):
     return public_user(user)
+
+@api.put("/auth/phone")
+async def update_phone(body: UpdatePhoneIn, user=Depends(get_current_user)):
+    phone = normalize_phone(body.phone)
+    if not phone or len(phone.replace("+", "")) < 7:
+        raise HTTPException(400, "Enter a valid phone number")
+
+    existing = await db.users.find_one({"phone": phone, "id": {"$ne": user["id"]}})
+    if existing:
+        raise HTTPException(400, "Phone already registered")
+
+    await db.otp_codes.update_many({"email": user["email"], "type": "phone", "used": False},
+                                   {"$set": {"used": True}})
+    await db.users.update_one({"id": user["id"]}, {"$set": {"phone": phone, "phone_verified": False}})
+    updated = await db.users.find_one({"id": user["id"]})
+    return public_user(updated)
 
 @api.get("/onboarding/me")
 async def onboarding_me(user=Depends(get_current_user)):
