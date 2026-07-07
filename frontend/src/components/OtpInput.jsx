@@ -62,11 +62,11 @@ export default function OtpInput({
   };
 
   return (
-    <div className="card p-5">
+    <div className="py-2">
       <div className="flex justify-between items-start mb-1">
         <div>
-          <p className="text-sm font-semibold text-gray-900">{label}</p>
-          {dest && <p className="text-xs text-gray-500 mt-0.5 font-mono">{dest}</p>}
+          <p className="text-sm font-semibold text-white">{label}</p>
+          {dest && <p className="text-xs text-zinc-500 mt-0.5 font-mono">{dest}</p>}
         </div>
         {verified && (
           <span className="badge badge-pro" data-testid={`${testId}-verified-badge`}>
@@ -89,8 +89,8 @@ export default function OtpInput({
                 onChange={(e) => handleChange(i, e.target.value)}
                 onKeyDown={(e) => handleKey(i, e)}
                 onPaste={handlePaste}
-                className="w-11 h-12 text-center font-mono text-xl bg-white border border-gray-200 rounded-lg
-                           focus:outline-none focus:border-[#39FF14] focus:ring-2 focus:ring-[#39FF14]/30"
+                className="w-11 h-12 text-center font-mono text-xl bg-[#121214] border border-zinc-800 rounded-xl text-white
+                           focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-500/30 transition-all"
               />
             ))}
           </div>
@@ -101,7 +101,7 @@ export default function OtpInput({
               data-testid={`${testId}-resend`}
               disabled={seconds > 0 || busy}
               onClick={handleResend}
-              className="text-xs text-gray-700 hover:text-gray-900 disabled:text-gray-400 disabled:cursor-not-allowed underline-offset-2 hover:underline"
+              className="text-xs text-zinc-400 hover:text-white disabled:text-zinc-700 disabled:cursor-not-allowed underline-offset-2 hover:underline transition-colors"
             >
               {seconds > 0 ? `Resend in 0:${String(seconds).padStart(2, "0")}` : "Resend code"}
             </button>

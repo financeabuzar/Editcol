@@ -25,10 +25,11 @@ export default function PhoneInput({ country, setCountry, phone, setPhone, testI
     <div ref={wrapRef} className="relative">
       <div className="flex">
         <button type="button" data-testid={`${testId}-country`} onClick={() => setOpen(!open)}
-          className="flex items-center gap-2 bg-white border border-r-0 border-gray-200 rounded-l-xl px-3 py-3 text-sm hover:bg-gray-50">
+          aria-expanded={open} aria-haspopup="listbox"
+          className="flex items-center gap-2 bg-background border border-r-0 border-border rounded-l-xl px-3 py-3 text-sm hover:bg-secondary transition-colors text-foreground">
           <span className="text-lg leading-none">{country.flag}</span>
-          <span className="font-mono text-gray-700">{country.dial}</span>
-          <ChevronDown size={14} className="text-gray-400" />
+          <span className="font-mono text-muted-foreground">{country.dial}</span>
+          <ChevronDown size={14} className="text-muted-foreground" />
         </button>
         <input
           data-testid={`${testId}-number`}
@@ -41,9 +42,9 @@ export default function PhoneInput({ country, setCountry, phone, setPhone, testI
       </div>
 
       {open && (
-        <div className="absolute left-0 right-0 z-20 mt-2 w-full min-w-0 sm:right-auto sm:w-80 bg-white rounded-xl border border-gray-200 shadow-xl overflow-hidden">
-          <div className="p-2 border-b border-gray-100 relative">
-            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
+        <div className="absolute left-0 right-0 z-20 mt-2 w-full min-w-0 sm:right-auto sm:w-80 bg-card rounded-xl border border-border shadow-2xl overflow-hidden">
+          <div className="p-2 border-b border-border relative">
+            <Search size={14} className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               autoFocus
               className="input pl-9 py-2 text-sm"
@@ -60,14 +61,14 @@ export default function PhoneInput({ country, setCountry, phone, setPhone, testI
                 key={c.iso}
                 data-testid={`${testId}-option-${c.iso}`}
                 onClick={() => { setCountry(c); setOpen(false); setQ(""); }}
-                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-gray-50 text-left"
+                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-secondary text-left transition-colors"
               >
                 <span className="text-lg">{c.flag}</span>
-                <span className="text-gray-900 flex-1 min-w-0 truncate">{c.name}</span>
-                <span className="font-mono text-gray-500 text-xs">{c.dial}</span>
+                <span className="text-foreground flex-1 min-w-0 truncate">{c.name}</span>
+                <span className="font-mono text-muted-foreground text-xs">{c.dial}</span>
               </button>
             ))}
-            {filtered.length === 0 && <p className="p-4 text-sm text-gray-500 text-center">No country found</p>}
+            {filtered.length === 0 && <p className="p-4 text-sm text-muted-foreground text-center">No country found</p>}
           </div>
         </div>
       )}

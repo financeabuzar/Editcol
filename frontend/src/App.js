@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { applyTheme, getInitialTheme } from "@/components/ThemeToggle";
 import AppErrorBoundary from "@/components/AppErrorBoundary";
+import CursorFollower from "@/components/CursorFollower";
 
 import Home from "@/pages/Home";
 import BrowseEditors from "@/pages/BrowseEditors";
@@ -37,7 +38,7 @@ function Shell({ children }) {
   return (
     <div className="App">
       {!hide && <Navbar/>}
-      <main className="flex-1">{children}</main>
+      <main className={`flex-1 ${!hide ? "pt-16" : ""}`}>{children}</main>
       {!hide && <Footer/>}
     </div>
   );
@@ -55,6 +56,7 @@ export default function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
+        <CursorFollower />
         <Shell>
           <AppErrorBoundary>
             <Routes>

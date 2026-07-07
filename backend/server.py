@@ -440,6 +440,7 @@ class EditorProfileIn(BaseModel):
     starting_price: Optional[float] = None
     portfolio: Optional[List[dict]] = None       # [{title,thumbnail_b64,url,description}]
     avatar_b64: Optional[str] = None
+    cover_b64: Optional[str] = None
     location: Optional[str] = None
     languages: Optional[List[str]] = None
     software: Optional[List[str]] = None

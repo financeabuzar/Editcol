@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import api, { WS_URL, formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
-import { Send, Paperclip, Image as ImageIcon, Check, CheckCheck, X } from "lucide-react";
+import { Send, Paperclip, Check, CheckCheck, X } from "lucide-react";
 
 export default function Messages() {
   const { user } = useAuth();
@@ -39,12 +39,6 @@ export default function Messages() {
   useEffect(() => {
     if (!user) return;
     const setupWs = async () => {
-      // Issue a one-off token via refresh (cookie-based session is httpOnly, so we use a short access token endpoint)
-      // For simplicity, we expose a token via /auth/ws-token route... but we don't have one.
-      // Instead, use a session: encode the user id+role from the cookie via /auth/me (already loaded).
-      // We'll use a server-side approach: WS verifies any access_token query.
-      // Fetch a token by calling /auth/refresh (returns httpOnly), then we can't read it.
-      // SOLUTION: WS accepts cookies on same origin; pass through standard WS upgrade.
       const ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(await getWsToken())}`);
       ws.onopen = () => { /* connected */ };
       ws.onmessage = (ev) => {
@@ -106,64 +100,64 @@ export default function Messages() {
   const active = convs.find(c => c.id === activeId);
 
   return (
-    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8">
-      <h1 className="font-heading text-3xl font-bold text-gray-900 mb-6">Messages</h1>
+    <div className="fade-in max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-6 sm:py-8 bg-background text-foreground">
+      <h1 className="font-heading text-3xl font-black text-foreground mb-6">Messages</h1>
 
       <div className="grid lg:grid-cols-[340px,1fr] gap-4 lg:gap-6 min-h-[70vh] lg:h-[70vh]">
         {/* Conversations list */}
-        <aside className="card overflow-y-auto scroll-area max-h-72 lg:max-h-none">
+        <aside className="card overflow-y-auto scroll-area max-h-72 lg:max-h-none border border-border">
           {loadingConvs ? (
             <div className="p-4 space-y-3">{[1,2,3].map(i => <div key={i} className="skeleton h-14"/>)}</div>
           ) : convs.length === 0 ? (
-            <div className="p-8 text-center text-sm text-gray-500">No conversations yet.<br/>Open an editor profile and click <strong>Message Editor</strong>.</div>
+            <div className="p-8 text-center text-sm text-muted-foreground">No conversations yet.<br/>Open an editor profile and click <strong>Message Editor</strong>.</div>
           ) : convs.map(c => (
             <button key={c.id} onClick={()=>setActiveId(c.id)} data-testid={`conv-${c.id}`}
-              className={`w-full text-left flex items-center gap-3 p-4 border-b border-gray-100 hover:bg-gray-50 ${activeId===c.id?"bg-gray-50":""}`}>
-              <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center font-heading text-gray-500 overflow-hidden">
+              className={`w-full text-left flex items-center gap-3 p-4 border-b border-border hover:bg-foreground/[0.02] transition-colors ${activeId===c.id?"bg-foreground/[0.04] border-l-2 border-purple-500":""}`}>
+              <div className="w-10 h-10 rounded-full bg-card border border-border flex items-center justify-center font-heading text-muted-foreground overflow-hidden">
                 {c.other_user.avatar ? <img src={c.other_user.avatar} className="w-full h-full object-cover" alt=""/> : c.other_user.name?.[0]}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex justify-between items-center">
-                  <p className="font-semibold text-gray-900 truncate">{c.other_user.name || "Unknown"}</p>
-                  {c.unread > 0 && <span className="ml-2 px-1.5 rounded-full bg-neon-grad text-[10px] font-bold text-ink">{c.unread}</span>}
+                  <p className="font-semibold text-foreground truncate">{c.other_user.name || "Unknown"}</p>
+                  {c.unread > 0 && <span className="ml-2 px-1.5 rounded-full bg-[#7C3AED] text-[10px] font-bold text-white">{c.unread}</span>}
                 </div>
-                <p className="text-xs text-gray-500 truncate">{c.last_message || "Say hi 👋"}</p>
+                <p className="text-xs text-muted-foreground truncate">{c.last_message || "Say hi 👋"}</p>
               </div>
             </button>
           ))}
         </aside>
 
         {/* Chat pane */}
-        <section className="card flex flex-col overflow-hidden min-h-[60vh] lg:min-h-0">
+        <section className="card flex flex-col overflow-hidden min-h-[60vh] lg:min-h-0 border border-border">
           {!active ? (
-            <div className="flex-1 flex items-center justify-center text-gray-400">Select a conversation</div>
+            <div className="flex-1 flex items-center justify-center text-muted-foreground">Select a conversation</div>
           ) : (
             <>
-              <header className="p-4 border-b border-gray-200 flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-gray-100 overflow-hidden flex items-center justify-center font-heading text-gray-500">
+              <header className="p-4 border-b border-border flex items-center gap-3 bg-card">
+                <div className="w-9 h-9 rounded-full bg-background border border-border overflow-hidden flex items-center justify-center font-heading text-muted-foreground">
                   {active.other_user.avatar ? <img src={active.other_user.avatar} className="w-full h-full object-cover" alt=""/> : active.other_user.name?.[0]}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-semibold text-gray-900 truncate">{active.other_user.name}</p>
-                  <p className="text-xs text-gray-500">{typingFrom ? "Typing…" : active.other_user.role}</p>
+                  <p className="font-semibold text-foreground truncate">{active.other_user.name}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide font-mono font-bold">{typingFrom ? "Typing…" : active.other_user.role}</p>
                 </div>
               </header>
 
-              <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-area p-4 space-y-3 bg-gray-50">
+              <div ref={scrollRef} className="flex-1 overflow-y-auto scroll-area p-4 space-y-3 bg-foreground/[0.015]">
                 {messages.map(m => <MessageBubble key={m.id} m={m} mine={m.sender_id === user.id}/>)}
               </div>
 
               {attachment && (
-                <div className="px-4 pt-3 flex items-center gap-2 text-sm">
+                <div className="px-4 pt-3 flex items-center gap-2 text-sm bg-card border-t border-border">
                   {attachment.type === "image" ? (
-                    <img src={attachment.b64} className="h-12 rounded" alt=""/>
-                  ) : <span className="px-2 py-1 rounded bg-gray-100">{attachment.name}</span>}
-                  <button onClick={()=>setAttachment(null)} className="text-gray-500 hover:text-gray-900"><X size={14}/></button>
+                    <img src={attachment.b64} className="h-12 rounded border border-border" alt=""/>
+                  ) : <span className="px-2 py-1 rounded bg-background border border-border text-xs text-foreground">{attachment.name}</span>}
+                  <button onClick={()=>setAttachment(null)} className="text-muted-foreground hover:text-foreground"><X size={14}/></button>
                 </div>
               )}
 
-              <div className="p-3 border-t border-gray-200 flex items-end gap-2">
-                <label className="cursor-pointer text-gray-500 hover:text-gray-900 p-2" data-testid="chat-attach">
+              <div className="p-3 border-t border-border bg-card flex items-end gap-2">
+                <label className="cursor-pointer text-muted-foreground hover:text-foreground p-2" data-testid="chat-attach">
                   <Paperclip size={18}/>
                   <input type="file" accept="image/*,video/*,application/*" hidden onChange={(e)=>onFile(e.target.files[0])}/>
                 </label>
@@ -183,9 +177,6 @@ export default function Messages() {
 }
 
 // Helper: fetch a short-lived WS token from /auth/me-based ephemeral endpoint.
-// To avoid adding a new backend endpoint, we'll use the access_token cookie via a tiny helper:
-// We expose a temporary token via document.cookie? No — httpOnly. So we add a backend endpoint
-// /auth/ws-token to issue a fresh short-lived token. Implement via API call.
 async function getWsToken() {
   try {
     const { data } = await api.post("/auth/ws-token");
@@ -196,16 +187,20 @@ async function getWsToken() {
 function MessageBubble({ m, mine }) {
   return (
     <div className={`flex ${mine ? "justify-end" : "justify-start"}`}>
-      <div className={`max-w-[86%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-sm break-words ${mine ? "bg-ink text-white" : "bg-white border border-gray-200 text-gray-900"} ${m.system ? "italic opacity-90" : ""}`}>
-        {m.attachment_b64 && m.attachment_type === "image" && <img src={m.attachment_b64} className="rounded-lg max-h-60 mb-2" alt="attachment"/>}
-        {m.attachment_b64 && m.attachment_type === "video" && <video src={m.attachment_b64} controls className="rounded-lg max-h-60 mb-2"/>}
+      <div className={`max-w-[86%] sm:max-w-[75%] rounded-2xl px-4 py-2.5 text-sm break-words border ${
+        mine 
+          ? "bg-[#7C3AED] border-[#7C3AED] text-white rounded-tr-none shadow-[0_4px_12px_rgba(124,58,237,0.15)]" 
+          : "bg-card border-border text-foreground rounded-tl-none"
+      } ${m.system ? "italic opacity-90" : ""}`}>
+        {m.attachment_b64 && m.attachment_type === "image" && <img src={m.attachment_b64} className="rounded-lg max-h-60 mb-2 border border-border" alt="attachment"/>}
+        {m.attachment_b64 && m.attachment_type === "video" && <video src={m.attachment_b64} controls className="rounded-lg max-h-60 mb-2 border border-border"/>}
         {m.attachment_b64 && m.attachment_type === "file" && (
           <a href={m.attachment_b64} download={m.attachment_name} className="block underline mb-2 text-xs">📎 {m.attachment_name}</a>
         )}
         {m.text && <p className="whitespace-pre-wrap">{m.text}</p>}
-        <div className={`text-[10px] mt-1 flex items-center gap-1 ${mine ? "text-gray-300 justify-end" : "text-gray-400"}`}>
+        <div className={`text-[10px] mt-1.5 flex items-center gap-1.5 ${mine ? "text-purple-200 justify-end" : "text-muted-foreground"}`}>
           {new Date(m.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-          {mine && (m.read ? <CheckCheck size={12} className="text-[#39FF14]"/> : <Check size={12}/>)}
+          {mine && (m.read ? <CheckCheck size={12} className="text-cyan-400 font-bold"/> : <Check size={12} className="text-purple-300"/>)}
         </div>
       </div>
     </div>

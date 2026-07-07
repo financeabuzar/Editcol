@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wand2, ArrowRight, Sparkles, Loader2, MessageSquare, Briefcase, Star } from "lucide-react";
+import { Wand2, Sparkles, Loader2, Briefcase } from "lucide-react";
 import api, { formatApiError } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import TrustBadges from "@/components/TrustBadges";
@@ -42,25 +42,28 @@ export default function AIMatch() {
   };
 
   return (
-    <div className="fade-in">
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-grid opacity-50" />
-        <div className="absolute right-[-100px] top-[-60px] hidden md:block">
-          <AiOrb size={420} />
-        </div>
-        <div className="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 pt-14 sm:pt-20 pb-10">
-          <p className="text-xs font-bold tracking-wider uppercase text-gray-500"><Sparkles size={12} className="inline -mt-0.5 text-[#39FF14]"/> AI Match</p>
-          <h1 className="font-heading text-4xl sm:text-6xl font-bold text-gray-900 mt-3 leading-tight break-words">
-            Describe your edit.<br/>We'll <span className="text-neon-grad">match the editor</span>.
-          </h1>
-          <p className="mt-5 text-base sm:text-lg text-gray-600 max-w-2xl">
-            Our AI ranks verified editors by skill, badges, trust score, price, and turnaround feasibility for your deadline.
-          </p>
-        </div>
-      </section>
+    <div className="fade-in bg-background text-foreground min-h-screen relative overflow-hidden">
+      {/* Glow blobs */}
+      <div className="absolute top-0 right-0 pointer-events-none z-0">
+        <AiOrb size={420} />
+      </div>
+      <div className="absolute top-1/4 left-1/4 w-[400px] h-[400px] bg-purple-900/5 rounded-full pointer-events-none" style={{ filter: "blur(130px)" }} />
 
-      <section className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
-        <TiltCard className="card p-4 sm:p-8 fade-in" maxTilt={2}>
+      <div className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 pt-20 pb-10">
+        <div className="flex items-center gap-2">
+          <Sparkles size={14} className="text-purple-500 animate-pulse"/>
+          <span className="text-xs font-bold tracking-[0.2em] uppercase text-muted-foreground font-mono">AI Matchmaker</span>
+        </div>
+        <h1 className="font-heading text-4xl sm:text-5xl font-black text-foreground mt-3 leading-[1.05] tracking-tight">
+          Describe your edit.<br/>We'll <span className="bg-gradient-to-r from-purple-400 to-cyan-400 bg-clip-text text-transparent">match the editor</span>.
+        </h1>
+        <p className="mt-3 text-sm text-muted-foreground max-w-xl">
+          Our AI ranks verified editors by skill alignment, pricing, trust score, and feasibility for your deadline.
+        </p>
+      </div>
+
+      <section className="relative z-10 max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 pb-16">
+        <TiltCard className="card p-5 sm:p-8 backdrop-blur-md" maxTilt={2}>
           <div className="grid sm:grid-cols-2 gap-5">
             <div>
               <label className="input-label">Content type</label>
@@ -102,16 +105,16 @@ export default function AIMatch() {
               </select>
             </div>
             <div className="flex items-center gap-2 pt-7">
-              <input id="mg" data-testid="ai-mg" type="checkbox" checked={form.motion_graphics} onChange={e=>set("motion_graphics", e.target.checked)} className="w-4 h-4 accent-[#39FF14]" />
-              <label htmlFor="mg" className="text-sm text-gray-700">Motion graphics needed</label>
+              <input id="mg" data-testid="ai-mg" type="checkbox" checked={form.motion_graphics} onChange={e=>set("motion_graphics", e.target.checked)} className="w-4 h-4 accent-purple-500 cursor-pointer" />
+              <label htmlFor="mg" className="text-sm text-muted-foreground select-none cursor-pointer">Motion graphics needed</label>
             </div>
           </div>
 
-          {err && <p className="mt-4 text-sm text-red-600">{err}</p>}
+          {err && <p className="mt-4 text-xs text-red-400 font-medium">{err}</p>}
 
           <div className="mt-6 flex justify-stretch sm:justify-end">
             <button data-testid="ai-run" onClick={run} disabled={busy || !form.budget} className="btn-primary inline-flex w-full sm:w-auto items-center justify-center gap-2 disabled:opacity-50">
-              {busy ? <Loader2 size={16} className="animate-spin"/> : <Wand2 size={16}/>} {busy ? "Finding editors…" : "Find my editor"}
+              {busy ? <Loader2 size={16} className="animate-spin text-white"/> : <Wand2 size={16}/>} {busy ? "Finding editors…" : "Find my editor"}
             </button>
           </div>
         </TiltCard>
@@ -123,17 +126,19 @@ export default function AIMatch() {
           <motion.section
             key="results"
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-            className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pb-24"
+            className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-10 pb-24 relative z-10"
           >
-            <h2 className="font-heading text-2xl font-semibold text-gray-900 mb-2">Top matches</h2>
-            <p className="text-sm text-gray-500 mb-6">{busy ? "Ranking verified editors…" : (matches?.length ? `${matches.length} editors matched.` : (note || "No editors matched — try widening your budget or removing motion graphics requirement."))}</p>
+            <h2 className="font-heading text-2xl font-black text-foreground mb-2">Top matches</h2>
+            <p className="text-sm text-muted-foreground mb-6">
+              {busy ? "Ranking verified editors…" : (matches?.length ? `${matches.length} editors matched.` : (note || "No editors matched — try widening your budget or removing motion graphics requirement."))}
+            </p>
 
             {busy ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {[1,2,3].map(i => <div key={i} className="card p-5"><div className="skeleton h-32 mb-3"/><div className="skeleton h-4 w-1/2 mb-2"/><div className="skeleton h-3 w-full"/></div>)}
+              <div className="grid sm:grid-cols-2 gap-6">
+                {[1,2].map(i => <div key={i} className="card p-5"><div className="skeleton h-32 mb-3"/><div className="skeleton h-4 w-1/2 mb-2"/><div className="skeleton h-3 w-full"/></div>)}
               </div>
             ) : (matches && matches.length > 0) ? (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid sm:grid-cols-2 gap-6">
                 {matches.map((m, i) => (
                   <motion.div key={m.id}
                     initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
@@ -153,29 +158,31 @@ export default function AIMatch() {
 function MatchCard({ m }) {
   return (
     <TiltCard className="card card-hover overflow-hidden h-full">
-      <div className="p-5">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-full overflow-hidden bg-gray-100 flex items-center justify-center font-heading text-gray-400">
-            {m.avatar ? <img src={m.avatar} alt="" className="w-full h-full object-cover" onError={(e)=>{e.currentTarget.style.display="none"}}/> : (m.name?.[0])}
+      <div className="p-5 flex flex-col justify-between h-full">
+        <div>
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-xl overflow-hidden bg-background border border-border flex items-center justify-center font-heading text-muted-foreground">
+              {m.avatar ? <img src={m.avatar} alt="" className="w-full h-full object-cover" onError={(e)=>{e.currentTarget.style.display="none"}}/> : (m.name?.[0])}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-foreground truncate">{m.name}</p>
+              <p className="text-xs text-muted-foreground">Starting ${m.starting_price ?? "—"}</p>
+            </div>
+            <div className="text-right">
+              <p className="font-mono text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">{m.score}</p>
+              <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">match</p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-gray-900 truncate">{m.name}</p>
-            <p className="text-xs text-gray-500">Starting ${m.starting_price ?? "—"}</p>
-          </div>
-          <div className="text-right">
-            <p className="font-mono text-2xl font-bold text-neon-grad">{m.score}</p>
-            <p className="text-[10px] uppercase tracking-wider text-gray-400">match</p>
+          <p className="mt-4 text-sm text-muted-foreground line-clamp-2">{m.bio || "—"}</p>
+          <div className="mt-3"><TrustBadges badges={m.badges}/></div>
+          <div className="mt-4 rounded-xl bg-background border border-border px-3.5 py-2.5">
+            <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground font-mono">AI Recommendation</p>
+            <p className="text-xs text-foreground mt-1 leading-relaxed">{m.reason}</p>
           </div>
         </div>
-        <p className="mt-3 text-sm text-gray-700 line-clamp-2">{m.bio || "—"}</p>
-        <div className="mt-3"><TrustBadges badges={m.badges}/></div>
-        <div className="mt-4 rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
-          <p className="text-[10px] uppercase tracking-wider text-gray-500">AI reason</p>
-          <p className="text-sm text-gray-800 mt-0.5">{m.reason}</p>
-        </div>
-        <div className="mt-5 flex gap-2">
-          <Link to={`/editor/${m.id}`} className="btn-outline text-xs flex-1 text-center">View profile</Link>
-          <Link to={`/editor/${m.id}`} state={{ open: "hire" }} className="btn-primary text-xs flex-1 text-center inline-flex items-center justify-center gap-1">
+        <div className="mt-6 flex gap-3">
+          <Link to={`/editor/${m.id}`} className="btn-outline text-xs flex-1 text-center py-2 min-h-0">View profile</Link>
+          <Link to={`/editor/${m.id}`} state={{ open: "hire" }} className="btn-primary text-xs flex-1 text-center inline-flex items-center justify-center gap-1 py-2 min-h-0">
             <Briefcase size={12}/> Hire
           </Link>
         </div>

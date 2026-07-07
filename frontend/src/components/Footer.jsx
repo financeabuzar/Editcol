@@ -10,13 +10,13 @@ const SOCIAL_LINKS = [
 
 export default function Footer() {
   return (
-    <footer className="relative mt-24 overflow-hidden border-t border-white/[0.08] bg-[#050505] text-[#a0a0a0] cinema-noise">
-      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#7c5cff] to-transparent" />
+    <footer className="relative mt-24 overflow-hidden border-t border-border bg-background text-muted-foreground cinema-noise">
+      <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent" />
       <div className="premium-shell py-14 sm:py-18">
         <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
           <div>
             <Logo size="md" as="div" />
-            <h2 className="mt-8 max-w-3xl text-4xl font-semibold leading-[0.98] text-white sm:text-6xl">
+            <h2 className="mt-8 max-w-3xl text-4xl font-semibold leading-[0.98] text-foreground sm:text-6xl">
               Ready to create your next viral video?
             </h2>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -38,20 +38,20 @@ export default function Footer() {
               ["/legal/refund", "Refunds"],
             ]} />
             <div>
-              <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-white">Social</p>
+              <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-foreground">Social</p>
               <div className="flex gap-2">
                 {SOCIAL_LINKS.map(({ Icon, href, label }) => (
-                  <a key={href} href={href} aria-label={label} target="_blank" rel="noreferrer" className="grid h-10 w-10 place-items-center rounded-full border border-white/[0.1] transition hover:border-[#43d9ff] hover:text-white">
+                  <a key={href} href={href} aria-label={label} target="_blank" rel="noreferrer" className="grid h-10 w-10 place-items-center rounded-full border border-border transition hover:border-accent hover:text-foreground">
                     <Icon size={16} />
                   </a>
                 ))}
               </div>
-              <a href="mailto:official@editcol.com" className="mt-4 block text-sm transition hover:text-white">official@editcol.com</a>
+              <a href="mailto:official@editcol.com" className="mt-4 block text-sm transition hover:text-foreground">official@editcol.com</a>
             </div>
           </div>
         </div>
 
-        <div className="mt-14 flex flex-col justify-between gap-3 border-t border-white/[0.08] pt-5 text-xs text-[#6f6f6f] md:flex-row">
+        <div className="mt-14 flex flex-col justify-between gap-3 border-t border-border pt-5 text-xs text-zinc-500 md:flex-row">
           <p>© {new Date().getFullYear()} EditCol. All rights reserved.</p>
           <p>Elite editing talent, curated for serious creators.</p>
         </div>
@@ -63,10 +63,10 @@ export default function Footer() {
 function FooterGroup({ title, links }) {
   return (
     <div>
-      <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-white">{title}</p>
+      <p className="mb-4 text-xs font-bold uppercase tracking-[0.16em] text-foreground">{title}</p>
       <ul className="space-y-2 text-sm">
         {links.map(([to, label]) => (
-          <li key={to}><Link to={to} className="transition hover:text-white">{label}</Link></li>
+          <li key={to}><Link to={to} className="transition hover:text-foreground">{label}</Link></li>
         ))}
       </ul>
     </div>

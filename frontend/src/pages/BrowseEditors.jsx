@@ -37,13 +37,13 @@ export default function BrowseEditors() {
 
   return (
     <div className="fade-in">
-      <section className="relative overflow-hidden border-b border-white/[0.08] bg-[#050505] py-14 sm:py-20 cinema-noise">
+      <section className="relative overflow-hidden border-b border-border bg-secondary/40 py-14 sm:py-20 cinema-noise">
         <div className="absolute inset-0 bg-grid" />
         <div className="premium-shell relative">
           <p className="eyebrow">Marketplace</p>
           <div className="mt-4 grid gap-8 lg:grid-cols-[1fr_24rem] lg:items-end">
             <div>
-              <h1 className="max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.025em] text-white sm:text-7xl">
+              <h1 className="max-w-4xl text-5xl font-black leading-[0.92] tracking-[-0.025em] text-foreground sm:text-7xl">
                 Browse editors with proof, taste, and availability.
               </h1>
               <p className="section-copy mt-6 max-w-2xl">
@@ -52,10 +52,10 @@ export default function BrowseEditors() {
             </div>
             <div className="card p-4">
               <div className="flex items-center gap-3">
-                <Sparkles className="text-[#43d9ff]" size={18} />
+                <Sparkles className="text-primary" size={18} />
                 <div>
-                  <p className="text-sm font-bold text-white">Live marketplace</p>
-                  <p className="text-xs text-[#a0a0a0]">{loading ? "Scanning editors" : `${editors.length} matching editors`}</p>
+                  <p className="text-sm font-bold text-foreground">Live marketplace</p>
+                  <p className="text-xs text-muted-foreground">{loading ? "Scanning editors" : `${editors.length} matching editors`}</p>
                 </div>
               </div>
             </div>
@@ -68,12 +68,12 @@ export default function BrowseEditors() {
           <aside className="space-y-4 lg:sticky lg:top-24 self-start">
             <div className="card p-5">
               <div className="mb-5 flex items-center justify-between">
-                <p className="text-sm font-bold text-white">Filters</p>
-                <SlidersHorizontal size={16} className="text-[#a0a0a0]" />
+                <p className="text-sm font-bold text-foreground">Filters</p>
+                <SlidersHorizontal size={16} className="text-muted-foreground" />
               </div>
               <label className="input-label">Search</label>
               <div className="relative">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#777]" />
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input data-testid="filter-search" value={q} onChange={e=>setQ(e.target.value)} onKeyDown={e=>e.key==="Enter"&&fetchEditors()} placeholder="Editor, format, style..." className="input pl-9" />
               </div>
               <button onClick={fetchEditors} className="btn-primary mt-3 w-full">Search</button>
@@ -133,7 +133,11 @@ function Chip({ active, onClick, children, testId }) {
       type="button"
       data-testid={testId}
       onClick={onClick}
-      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition ${active ? "border-[#43d9ff]/50 bg-[#43d9ff]/12 text-white" : "border-white/[0.1] text-[#a0a0a0] hover:border-white/25 hover:text-white"}`}
+      className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-all duration-200 ${
+        active 
+          ? "border-purple-500/50 bg-purple-500/10 text-foreground shadow-[0_0_15px_rgba(124,58,237,0.15)]" 
+          : "border-border text-muted-foreground hover:border-foreground/30 hover:text-foreground"
+      }`}
     >
       {children}
     </button>

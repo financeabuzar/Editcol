@@ -1,22 +1,35 @@
 import { Link } from "react-router-dom";
 
 /**
- * EditCol logo wrapped in a dark pill container so the white wordmark reads on light pages.
- * The actual logo file is the provided EditCol asset — typography is preserved.
+ * EditCol logo wrapped in a theme-aware container.
+ * Switches between editcol-logo-lighttheme.png (light theme) and editcol-logo.png (dark theme).
  */
 export default function Logo({ size = "md", className = "", as = "link" }) {
   const sizeMap = { sm: "h-7", md: "h-9", lg: "h-11", xl: "h-14" };
   const cls = `logo-chip max-w-full shrink-0 ${className}`;
   const content = (
-    <img
-      src="/editcol-logo.png"
-      alt="EditCol"
-      width="640"
-      height="180"
-      decoding="async"
-      className={`${sizeMap[size] || sizeMap.md} w-auto max-w-[9.5rem] sm:max-w-none block`}
-      draggable={false}
-    />
+    <>
+      {/* Light theme logo: visible by default, hidden when HTML has .dark class */}
+      <img
+        src="/editcol-logo-lighttheme.png"
+        alt="EditCol"
+        width="640"
+        height="180"
+        decoding="async"
+        className={`${sizeMap[size] || sizeMap.md} w-auto max-w-[9.5rem] sm:max-w-none block dark:hidden`}
+        draggable={false}
+      />
+      {/* Dark theme logo: hidden by default, visible when HTML has .dark class */}
+      <img
+        src="/editcol-logo.png"
+        alt="EditCol"
+        width="640"
+        height="180"
+        decoding="async"
+        className={`${sizeMap[size] || sizeMap.md} w-auto max-w-[9.5rem] sm:max-w-none hidden dark:block`}
+        draggable={false}
+      />
+    </>
   );
   if (as === "div") return <div data-testid="editcol-logo" className={cls}>{content}</div>;
   return (

@@ -33,6 +33,7 @@ const emptyClient = {
   bio: "",
   creator_types: [],
   video_types: [],
+  role_detail: "client",
   hire_frequency: "",
   monthly_budget: "₹25k",
   social_links: {},
@@ -93,13 +94,13 @@ async function videosFromFiles(files, existing = []) {
 function TextInput({ label, value, onChange, placeholder, type = "text", invalid }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold uppercase tracking-wide text-gray-400">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-wide text-zinc-400">{label}</span>
       <input
         type={type}
         value={value || ""}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className={`mt-2 h-12 w-full rounded-xl border bg-white/5 px-4 text-white outline-none transition placeholder:text-gray-600 ${invalid ? "border-red-400" : "border-white/10 focus:border-[#39FF14]"}`}
+        className={`mt-2 h-12 w-full rounded-xl border bg-[#121214] px-4 text-white outline-none transition placeholder:text-zinc-600 ${invalid ? "border-red-400" : "border-zinc-900 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]"}`}
       />
     </label>
   );
@@ -108,13 +109,13 @@ function TextInput({ label, value, onChange, placeholder, type = "text", invalid
 function TextArea({ label, value, onChange, placeholder, rows = 5 }) {
   return (
     <label className="block">
-      <span className="text-xs font-bold uppercase tracking-wide text-gray-400">{label}</span>
+      <span className="text-xs font-bold uppercase tracking-wide text-zinc-400">{label}</span>
       <textarea
         rows={rows}
         value={value || ""}
         placeholder={placeholder}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full rounded-xl border border-white/10 bg-white/5 p-4 text-white outline-none transition placeholder:text-gray-600 focus:border-[#39FF14]"
+        className="mt-2 w-full rounded-xl border border-zinc-900 bg-[#121214] p-4 text-white outline-none transition placeholder:text-zinc-600 focus:border-[#7C3AED] focus:ring-1 focus:ring-[#7C3AED]"
       />
     </label>
   );
@@ -123,17 +124,17 @@ function TextArea({ label, value, onChange, placeholder, rows = 5 }) {
 function AvatarUpload({ value, onChange, label = "Profile Picture" }) {
   return (
     <div>
-      <p className="text-xs font-bold uppercase tracking-wide text-gray-400">{label}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-zinc-400">{label}</p>
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center">
-        <div className="h-24 w-24 overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+        <div className="h-24 w-24 overflow-hidden rounded-2xl border border-zinc-800 bg-[#121214]">
           {value ? (
             <img src={value} alt="" className="h-full w-full object-cover" />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-gray-500"><UserRound /></div>
+            <div className="flex h-full w-full items-center justify-center text-zinc-600"><UserRound /></div>
           )}
         </div>
-        <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 text-sm font-semibold text-white hover:bg-white/10">
-          <UploadCloud size={16} /> Upload photo
+        <label className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-full border border-zinc-800 bg-[#0B0B0F] px-4 text-sm font-semibold text-white hover:bg-zinc-950 transition-colors">
+          <UploadCloud size={16} className="text-zinc-400" /> Upload photo
           <input hidden type="file" accept="image/*" onChange={async (e) => onChange(await readFile(e.target.files?.[0], 2))} />
         </label>
       </div>
@@ -146,7 +147,11 @@ function Chip({ active, children, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-10 rounded-full border px-4 py-2 text-sm font-semibold transition ${active ? "border-[#39FF14] bg-[#39FF14] text-black" : "border-white/10 bg-white/5 text-gray-200 hover:bg-white/10"}`}
+      className={`min-h-10 rounded-full border px-4 py-2 text-sm font-semibold transition-all duration-200 ${
+        active
+          ? "border-[#7C3AED] bg-[#7C3AED]/10 text-white shadow-[0_0_15px_rgba(124,58,237,0.2)]"
+          : "border-zinc-800 bg-[#0B0B0F] text-zinc-300 hover:bg-zinc-900 hover:border-zinc-700"
+      }`}
     >
       {children}
     </button>
@@ -158,9 +163,15 @@ function RadioCard({ active, children, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`rounded-2xl border p-4 text-left text-sm font-semibold transition ${active ? "border-[#39FF14] bg-[#39FF14]/10 text-white" : "border-white/10 bg-white/[0.04] text-gray-300 hover:bg-white/[0.08]"}`}
+      className={`rounded-2xl border p-4 text-left text-sm font-semibold transition-all duration-200 ${
+        active
+          ? "border-[#7C3AED] bg-[#7C3AED]/10 text-white shadow-[0_0_15px_rgba(124,58,237,0.15)]"
+          : "border-zinc-800 bg-[#0B0B0F] text-zinc-300 hover:bg-zinc-900 hover:border-zinc-700"
+      }`}
     >
-      <span className={`mr-3 inline-flex h-4 w-4 rounded-full border align-middle ${active ? "border-[#39FF14] bg-[#39FF14]" : "border-white/30"}`} />
+      <span className={`mr-3 inline-flex h-4 w-4 rounded-full border align-middle transition-all ${
+        active ? "border-[#7C3AED] bg-[#7C3AED]" : "border-zinc-700"
+      }`} />
       {children}
     </button>
   );
@@ -168,7 +179,7 @@ function RadioCard({ active, children, onClick }) {
 
 function WizardCard({ children }) {
   return (
-    <div className="w-full rounded-3xl border border-white/10 bg-white/[0.04] p-5 shadow-2xl backdrop-blur sm:p-8">
+    <div className="w-full rounded-3xl border border-zinc-900 bg-[#08080A]/60 p-5 shadow-2xl backdrop-blur-md sm:p-8">
       {children}
     </div>
   );
@@ -254,7 +265,14 @@ export default function Onboarding() {
 
   const persistProfile = async () => {
     if (invalidUrls) throw new Error("Please fix invalid URLs before continuing.");
-    await api.put("/onboarding/profile", { data: form });
+    const dataToSave = { ...form };
+    if (role === "editor" && typeof dataToSave.languages === "string") {
+      dataToSave.languages = dataToSave.languages
+        .split(",")
+        .map((lang) => lang.trim())
+        .filter(Boolean);
+    }
+    await api.put("/onboarding/profile", { data: dataToSave });
   };
 
   const next = async () => {
@@ -294,16 +312,22 @@ export default function Onboarding() {
   if (!user) return null;
 
   return (
-    <div className="min-h-screen bg-[#050608] text-white">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6 sm:px-8">
+    <div className="min-h-screen bg-[#050505] text-white flex flex-col relative overflow-hidden selection:bg-purple-600 selection:text-white">
+      {/* Background glow blobs */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-900/10 rounded-full pointer-events-none" style={{ filter: "blur(150px)" }} />
+      <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-950/10 rounded-full pointer-events-none" style={{ filter: "blur(130px)" }} />
+
+      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-5 py-6 sm:px-8 z-10">
         <div className="flex items-center justify-between">
-          <div className="font-heading text-2xl font-black tracking-tight">EDITCOL</div>
-          {phase !== "thanks" && <div className="text-xs font-semibold text-gray-400">Step {stepLabel} of {totalSteps}</div>}
+          <div className="font-heading text-2xl font-black tracking-tight flex items-center gap-2">
+            <img src="/editcol-logo.png" alt="EditCol" className="h-6 w-auto object-contain" />
+          </div>
+          {phase !== "thanks" && <div className="text-xs font-semibold text-zinc-400 font-mono">Step {stepLabel} / {totalSteps}</div>}
         </div>
         {phase !== "thanks" && (
-          <div className="mt-5 grid gap-2" style={{ gridTemplateColumns: `repeat(${totalSteps}, minmax(0, 1fr))` }}>
+          <div className="mt-5 grid gap-2 animate-pulse" style={{ gridTemplateColumns: `repeat(${totalSteps}, minmax(0, 1fr))` }}>
             {Array.from({ length: totalSteps }, (_, index) => (
-              <div key={index} className={`h-1 rounded-full ${stepLabel >= index + 1 ? "bg-[#39FF14]" : "bg-white/10"}`} />
+              <div key={index} className={`h-1 rounded-full transition-all duration-300 ${stepLabel >= index + 1 ? "bg-gradient-to-r from-purple-500 to-cyan-500" : "bg-zinc-800"}`} />
             ))}
           </div>
         )}
@@ -313,10 +337,10 @@ export default function Onboarding() {
             {phase === "welcome" && (
               <motion.section key="welcome" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="w-full">
                 <div className="max-w-2xl">
-                  <p className="text-sm font-bold uppercase tracking-[0.25em] text-[#39FF14]">Welcome {user.name?.split(" ")?.[0] || "there"} 👋</p>
-                  <h1 className="mt-4 font-heading text-4xl font-black tracking-tight sm:text-6xl">Let's build your EditCol profile.</h1>
-                  <p className="mt-5 text-lg text-gray-400">This only takes about 2 minutes.</p>
-                  <button onClick={() => setPhase("role")} className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#39FF14] px-6 font-bold text-black">
+                  <p className="text-sm font-bold uppercase tracking-[0.25em] text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">Welcome {user.name?.split(" ")?.[0] || "there"} 👋</p>
+                  <h1 className="mt-4 font-heading text-4xl font-black tracking-tight sm:text-6xl text-white">Let's build your EditCol profile.</h1>
+                  <p className="mt-5 text-lg text-zinc-400">This only takes about 2 minutes.</p>
+                  <button onClick={() => setPhase("role")} className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-white text-black hover:bg-zinc-200 font-bold px-6 transition-all duration-200 hover:shadow-lg active:scale-[0.98]">
                     Continue <ArrowRight size={18} />
                   </button>
                 </div>
@@ -325,7 +349,7 @@ export default function Onboarding() {
 
             {phase === "role" && (
               <motion.section key="role" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="w-full">
-                <h1 className="font-heading text-4xl font-black">Choose how you want to use EditCol</h1>
+                <h1 className="font-heading text-4xl font-black text-white">Choose how you want to use EditCol</h1>
                 <div className="mt-8 grid gap-5 md:grid-cols-2">
                   <RoleChoice
                     active={role === "client"}
@@ -342,10 +366,10 @@ export default function Onboarding() {
                     onClick={() => setRole("editor")}
                   />
                 </div>
-                {err && <p className="mt-4 text-sm text-red-300">{err}</p>}
+                {err && <p className="mt-4 text-sm text-red-400 font-medium">{err}</p>}
                 <div className="mt-8 flex justify-between">
-                  <button onClick={back} className="inline-flex items-center gap-2 text-sm text-gray-400"><ArrowLeft size={16} /> Back</button>
-                  <button disabled={!role || busy} onClick={() => saveRole(role)} className="inline-flex h-12 items-center gap-2 rounded-full bg-[#39FF14] px-6 font-bold text-black disabled:opacity-50">
+                  <button onClick={back} className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors"><ArrowLeft size={16} /> Back</button>
+                  <button disabled={!role || busy} onClick={() => saveRole(role)} className="inline-flex h-12 items-center gap-2 rounded-full bg-white text-black hover:bg-zinc-200 font-bold px-6 disabled:opacity-50 transition-all active:scale-[0.98]">
                     {busy && <Loader2 size={16} className="animate-spin" />} Continue
                   </button>
                 </div>
@@ -355,10 +379,10 @@ export default function Onboarding() {
             {phase === "profile" && (
               <motion.section key={`${role}-${roleStep}`} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -16 }} className="w-full">
                 <ProfileStep role={role} step={roleStep} form={form} setForm={setForm} toggle={toggle} user={user} />
-                {err && <p className="mt-4 text-sm text-red-300">{err}</p>}
+                {err && <p className="mt-4 text-sm text-red-400 font-medium">{err}</p>}
                 <div className="mt-8 flex justify-between">
-                  <button onClick={back} className="inline-flex items-center gap-2 text-sm text-gray-400"><ArrowLeft size={16} /> Back</button>
-                  <button onClick={next} disabled={busy} className="inline-flex h-12 items-center gap-2 rounded-full bg-[#39FF14] px-6 font-bold text-black disabled:opacity-50">
+                  <button onClick={back} className="inline-flex items-center gap-2 text-sm text-zinc-500 hover:text-white transition-colors"><ArrowLeft size={16} /> Back</button>
+                  <button onClick={next} disabled={busy} className="inline-flex h-12 items-center gap-2 rounded-full bg-white text-black hover:bg-zinc-200 font-bold px-6 disabled:opacity-50 transition-all active:scale-[0.98]">
                     {busy && <Loader2 size={16} className="animate-spin" />}
                     {roleStep === totalRoleSteps - 1 ? "Submit" : "Continue"}
                     <ArrowRight size={16} />
@@ -369,20 +393,20 @@ export default function Onboarding() {
 
             {phase === "thanks" && (
               <motion.section key="thanks" initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} className="mx-auto w-full max-w-xl text-center">
-                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#39FF14] text-black">
+                <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-tr from-purple-500 to-cyan-500 text-white shadow-lg shadow-purple-500/20">
                   <CheckCircle2 size={34} />
                 </div>
                 <h1 className="mt-6 font-heading text-4xl font-black">Thank you 🎉</h1>
-                <p className="mt-4 text-lg text-gray-300">
+                <p className="mt-4 text-lg text-zinc-300">
                   {role === "editor" ? "Your profile has been submitted." : "Your profile is ready."}
                 </p>
                 {role === "editor" && (
-                  <div className="mt-6 rounded-2xl border border-white/10 bg-white/[0.04] p-5 text-gray-300">
+                  <div className="mt-6 rounded-2xl border border-zinc-900 bg-[#08080A] p-5 text-zinc-400">
                     <p>Our team will review your videos.</p>
                     <p className="mt-2 font-semibold text-white">Estimated verification time: 12-24 hours</p>
                   </div>
                 )}
-                <button onClick={() => nav("/dashboard", { replace: true })} className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-[#39FF14] px-6 font-bold text-black">
+                <button onClick={() => nav("/dashboard", { replace: true })} className="mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-white text-black hover:bg-zinc-200 font-bold px-6 transition-all duration-200">
                   Go to dashboard <ArrowRight size={16} />
                 </button>
               </motion.section>
@@ -399,13 +423,22 @@ function RoleChoice({ active, emoji, title, items, onClick }) {
     <button
       type="button"
       onClick={onClick}
-      className={`min-h-72 rounded-3xl border p-7 text-left transition ${active ? "border-[#39FF14] bg-[#39FF14]/10 shadow-[0_0_40px_rgba(57,255,20,0.14)]" : "border-white/10 bg-white/[0.04] hover:bg-white/[0.08]"}`}
+      className={`min-h-72 rounded-3xl border p-7 text-left transition-all duration-300 flex flex-col justify-between ${
+        active
+          ? "border-purple-500 bg-purple-500/10 shadow-[0_0_40px_rgba(124,58,237,0.15)] text-white"
+          : "border-zinc-900 bg-[#08080A]/60 hover:bg-zinc-900/60 text-zinc-300 hover:border-zinc-800"
+      }`}
     >
-      <div className="text-4xl">{emoji}</div>
-      <h2 className="mt-5 max-w-sm font-heading text-3xl font-black leading-tight">{title}</h2>
-      <ul className="mt-7 space-y-3 text-gray-300">
+      <div>
+        <div className="text-4xl">{emoji}</div>
+        <h2 className="mt-5 max-w-sm font-heading text-2xl sm:text-3xl font-black leading-tight">{title}</h2>
+      </div>
+      <ul className="mt-6 space-y-2.5 text-zinc-400">
         {items.map((item) => (
-          <li key={item} className="flex items-center gap-3"><CheckCircle2 size={17} className="text-[#39FF14]" /> {item}</li>
+          <li key={item} className="flex items-center gap-3">
+            <CheckCircle2 size={16} className={active ? "text-purple-400" : "text-zinc-700"} />
+            <span>{item}</span>
+          </li>
         ))}
       </ul>
     </button>
@@ -454,10 +487,10 @@ function ClientStep({ step, form, setForm, toggle, user }) {
             max={budgetMarks.length - 1}
             value={Math.max(0, budgetMarks.indexOf(form.monthly_budget))}
             onChange={(e) => setForm({ monthly_budget: budgetMarks[Number(e.target.value)] })}
-            className="w-full accent-[#39FF14]"
+            className="w-full accent-purple-500 cursor-pointer"
           />
-          <div className="mt-5 flex justify-between text-sm font-semibold text-gray-400">{budgetMarks.map((mark) => <span key={mark}>{mark}</span>)}</div>
-          <p className="mt-8 font-heading text-4xl font-black text-[#39FF14]">{form.monthly_budget}</p>
+          <div className="mt-5 flex justify-between text-sm font-semibold text-zinc-500">{budgetMarks.map((mark) => <span key={mark}>{mark}</span>)}</div>
+          <p className="mt-8 font-heading text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">{form.monthly_budget}</p>
         </WizardCard>
       ),
     },
@@ -481,7 +514,7 @@ function EditorStep({ step, form, setForm, toggle }) {
             <TextArea label="Bio" value={form.bio} onChange={(bio) => setForm({ bio })} placeholder="Describe your editing style, niches, and strongest work." />
             <div className="grid gap-4 sm:grid-cols-3">
               <TextInput label="Country" value={form.country} onChange={(country) => setForm({ country })} />
-              <TextInput label="Languages" value={form.languages} onChange={(languages) => setForm({ languages })} />
+              <TextInput label="Languages" value={Array.isArray(form.languages) ? form.languages.join(", ") : form.languages || ""} onChange={(languages) => setForm({ languages })} />
               <TextInput label="Timezone" value={form.timezone} onChange={(timezone) => setForm({ timezone })} />
             </div>
           </div>
@@ -525,9 +558,9 @@ function EditorStep({ step, form, setForm, toggle }) {
       content: (
         <WizardCard>
           <LinkGrid fields={portfolioLinks} values={form.portfolio_links} onChange={(portfolio_links) => setForm({ portfolio_links })} />
-          <div className="mt-8 rounded-2xl border border-white/10 bg-black/20 p-4">
+          <div className="mt-8 rounded-2xl border border-zinc-900 bg-black/20 p-4">
             <p className="font-semibold text-white">Connect your channels</p>
-            <p className="mt-1 text-sm text-gray-400">URL verification now. OAuth imports can attach followers, thumbnails, recent work, and profile pictures later.</p>
+            <p className="mt-1 text-sm text-zinc-400">URL verification now. OAuth imports can attach followers, thumbnails, recent work, and profile pictures later.</p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {connectPlatforms.map((platform) => (
                 <TextInput
@@ -548,33 +581,33 @@ function EditorStep({ step, form, setForm, toggle }) {
       title: "Upload Your Best Work",
       content: (
         <WizardCard>
-          <p className="text-gray-300"> Upload 1 portfolio video.</p>
-          <p className="mt-2 text-sm text-gray-500">Supported: MP4, MOV. Max 500MB each.</p>
-          <label className="mt-5 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-[#39FF14]/40 bg-[#39FF14]/5 p-5 text-center text-sm text-gray-300 hover:bg-[#39FF14]/10">
-            <UploadCloud className="mb-2 text-[#39FF14]" /> Upload videos
+          <p className="text-zinc-300"> Upload 1 portfolio video.</p>
+          <p className="mt-2 text-sm text-zinc-500">Supported: MP4, MOV. Max 500MB each.</p>
+          <label className="mt-5 flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-purple-500/30 bg-purple-500/5 p-5 text-center text-sm text-zinc-300 hover:bg-purple-500/10 transition-colors">
+            <UploadCloud className="mb-2 text-purple-400" /> Upload videos
             <input
-  hidden
-  type="file"
-  accept=".mp4,.mov,video/mp4,video/quicktime"
-  onChange={async (e) => {
-    const videos = await videosFromFiles(e.target.files, []);
-    setForm({
-      portfolio_videos: videos.slice(0, 1),
-    });
-  }}
-/>
+              hidden
+              type="file"
+              accept=".mp4,.mov,video/mp4,video/quicktime"
+              onChange={async (e) => {
+                const videos = await videosFromFiles(e.target.files, []);
+                setForm({
+                  portfolio_videos: videos.slice(0, 1),
+                });
+              }}
+            />
           </label>
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-400">
+          <div className="mt-4 flex items-center justify-between text-sm text-zinc-500">
             <span>{(form.portfolio_videos || []).length}/10 uploaded</span>
             <span>{(form.portfolio_videos || []).length >= 1 ? "Ready" : "Need at least 1"}</span>
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {(form.portfolio_videos || []).map((video, index) => (
-              <div key={`${video.name}-${index}`} className="rounded-2xl border border-white/10 bg-black/30 p-3">
+              <div key={`${video.name}-${index}`} className="rounded-2xl border border-zinc-900 bg-black/30 p-3">
                 <video src={video.src} controls className="aspect-video w-full rounded-xl bg-black object-cover" />
-                <div className="mt-2 flex items-center justify-between gap-2 text-xs text-gray-400">
+                <div className="mt-2 flex items-center justify-between gap-2 text-xs text-zinc-400">
                   <span className="truncate">{video.name}</span>
-                  <button type="button" onClick={() => setForm({ portfolio_videos: form.portfolio_videos.filter((_, i) => i !== index) })} className="text-red-300">Remove</button>
+                  <button type="button" onClick={() => setForm({ portfolio_videos: form.portfolio_videos.filter((_, i) => i !== index) })} className="text-red-400">Remove</button>
                 </div>
               </div>
             ))}
@@ -590,7 +623,7 @@ function EditorStep({ step, form, setForm, toggle }) {
       title: "Review Everything",
       content: (
         <WizardCard>
-          <div className="grid gap-4 text-sm text-gray-300 sm:grid-cols-2">
+          <div className="grid gap-4 text-sm text-zinc-400 sm:grid-cols-2">
             <ReviewItem label="Experience" value={form.experience_level} />
             <ReviewItem label="Years" value={form.years_experience} />
             <ReviewItem label="Categories" value={(form.categories || []).join(", ")} />
@@ -611,7 +644,7 @@ function EditorStep({ step, form, setForm, toggle }) {
 function StepShell({ title, children }) {
   return (
     <div>
-      <h1 className="font-heading text-4xl font-black">{title}</h1>
+      <h1 className="font-heading text-4xl font-black text-white">{title}</h1>
       <div className="mt-6">{children}</div>
     </div>
   );
@@ -629,8 +662,8 @@ function ChoiceGrid({ options, values = [], onToggle }) {
 
 function ReviewItem({ label, value }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-      <p className="text-xs font-bold uppercase tracking-wide text-gray-500">{label}</p>
+    <div className="rounded-2xl border border-zinc-900 bg-black/20 p-4">
+      <p className="text-xs font-bold uppercase tracking-wide text-zinc-500">{label}</p>
       <p className="mt-2 break-words text-white">{value || "Not added"}</p>
     </div>
   );
