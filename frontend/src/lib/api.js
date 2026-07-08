@@ -15,12 +15,22 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-api.interceptors.response.use((response) => {
-  if (response.data?.access_token) {
-    localStorage.setItem("editcol_access_token", response.data.access_token);
+api.interceptors.response.use(
+  (response) => {
+    if (response.data?.access_token) {
+      localStorage.setItem("editcol_access_token", response.data.access_token);
+    }
+    return response;
+  },
+  (error) => {
+    const status = error?.response?.status;
+    if ((status === 401 || status === 403) && window.location.pathname !== "/login") {
+      localStorage.removeItem("editcol_access_token");
+      window.location.assign(`/login?from=${encodeURIComponent(window.location.pathname)}`);
+    }
+    return Promise.reject(error);
   }
-  return response;
-});
+);
 
 export function formatApiError(err) {
   if (err?.message === "Network Error") {
