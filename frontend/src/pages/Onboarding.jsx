@@ -59,6 +59,49 @@ const emptyEditor = {
   availability: "",
 };
 
+const clientProfileFields = [
+  "avatar",
+  "profile_name",
+  "company",
+  "bio",
+  "creator_types",
+  "video_types",
+  "role_detail",
+  "hire_frequency",
+  "monthly_budget",
+  "social_links",
+];
+
+const editorProfileFields = [
+  "avatar",
+  "bio",
+  "country",
+  "languages",
+  "timezone",
+  "experience_level",
+  "years_experience",
+  "categories",
+  "software",
+  "hourly_rate",
+  "starting_price",
+  "currency",
+  "social_links",
+  "portfolio_links",
+  "connected_accounts",
+  "portfolio_videos",
+  "availability",
+];
+
+function pickProfileFields(form, role) {
+  const fields = role === "editor" ? editorProfileFields : clientProfileFields;
+  return fields.reduce((payload, field) => {
+    if (Object.prototype.hasOwnProperty.call(form, field)) {
+      payload[field] = form[field];
+    }
+    return payload;
+  }, {});
+}
+
 function readFile(file, maxMb = 8) {
   return new Promise((resolve, reject) => {
     if (!file) return resolve("");
@@ -265,7 +308,7 @@ export default function Onboarding() {
 
   const persistProfile = async () => {
     if (invalidUrls) throw new Error("Please fix invalid URLs before continuing.");
-    const dataToSave = { ...form };
+    const dataToSave = pickProfileFields(form, role);
     if (role === "editor" && typeof dataToSave.languages === "string") {
       dataToSave.languages = dataToSave.languages
         .split(",")
