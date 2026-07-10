@@ -19,17 +19,17 @@ import math
 from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
 from html import escape
-from typing import Optional, List, Literal, Dict, Set, Any
+from typing import Annotated, Optional, List, Literal, Dict, Set, Any
 
 import bcrypt
 import jwt
 import requests
-from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, WebSocket, WebSocketDisconnect, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, WebSocket, WebSocketDisconnect, Query, Path as ApiPath
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ReturnDocument
-from pydantic import BaseModel, Field, EmailStr, ConfigDict
+from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator, model_validator
 
 # ------------------------------- Config --------------------------------
 def env_int(name: str, default: int, minimum: int = 1) -> int:
@@ -620,100 +620,177 @@ async def require_admin(user=Depends(get_current_user)) -> dict:
     return user
 
 # ------------------------------- Schemas --------------------------------
-class RegisterIn(BaseModel):
-    name: str
+ID_RE = r"^[0-9A-Za-z_-]{1,100}$"
+TOKEN_RE = r"^[0-9A-Za-z._~+/=-]{16,4096}$"
+SAFE_TEXT_RE = r"^[^\x00-\x08\x0b\x0c\x0e-\x1f\x7f<>]*$"
+DATA_URL_RE = r"^data:[a-zA-Z0-9.+-]+/[a-zA-Z0-9.+-]+;base64,[A-Za-z0-9+/=\r\n]+$"
+DEADLINE_RE = r"^(24h|3d|5d|7d|10d|12d|14d|30d|\d{4}-\d{2}-\d{2})$"
+
+UserId = Annotated[str, Field(min_length=1, max_length=100, pattern=ID_RE)]
+ShortText = Annotated[str, Field(min_length=1, max_length=80, pattern=SAFE_TEXT_RE)]
+MediumText = Annotated[str, Field(min_length=1, max_length=300, pattern=SAFE_TEXT_RE)]
+LongText = Annotated[str, Field(min_length=1, max_length=3000, pattern=SAFE_TEXT_RE)]
+OptionalText = Annotated[str, Field(min_length=0, max_length=1000, pattern=SAFE_TEXT_RE)]
+PasswordText = Annotated[str, Field(min_length=8, max_length=128)]
+PhoneText = Annotated[str, Field(min_length=8, max_length=16, pattern=r"^\+[1-9]\d{7,14}$")]
+OtpText = Annotated[str, Field(min_length=6, max_length=6, pattern=r"^\d{6}$")]
+TokenText = Annotated[str, Field(min_length=16, max_length=4096, pattern=TOKEN_RE)]
+DataUrlText = Annotated[str, Field(min_length=22, max_length=12_000_000, pattern=DATA_URL_RE)]
+DeadlineText = Annotated[str, Field(min_length=2, max_length=10, pattern=DEADLINE_RE)]
+Money = Annotated[float, Field(ge=0, le=1_000_000)]
+Rate = Annotated[float, Field(ge=0, le=10_000)]
+SafeStringList = Annotated[List[ShortText], Field(min_length=0, max_length=30)]
+
+class StrictBaseModel(BaseModel):
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+class PortfolioItem(StrictBaseModel):
+    title: ShortText
+    thumbnail_b64: Optional[DataUrlText] = None
+    url: Annotated[Optional[str], Field(default=None, min_length=0, max_length=500, pattern=r"^(|https?://[^\s<>]+)$")]
+    description: Optional[OptionalText] = None
+
+class RegisterIn(StrictBaseModel):
+    name: ShortText
     email: EmailStr
-    phone: str
-    password: str = Field(min_length=6)
+    phone: PhoneText
+    password: PasswordText
     role: Literal["pending", "client", "editor"] = "pending"
 
-class LoginIn(BaseModel):
-    email: str
-    password: str
+class LoginIn(StrictBaseModel):
+    email: Annotated[str, Field(min_length=3, max_length=254, pattern=r"^[^\s<>@]+@[^\s<>@]+\.[^\s<>@]+$|^\+[1-9]\d{7,14}$")]
+    password: PasswordText
     remember_me: bool = False
 
-class GoogleAuthIn(BaseModel):
-    credential: str
+class GoogleAuthIn(StrictBaseModel):
+    credential: TokenText
     role: Literal["pending", "client", "editor"] = "pending"
     remember_me: bool = True
 
-class OnboardingRoleIn(BaseModel):
+class OnboardingRoleIn(StrictBaseModel):
     role: Literal["client", "editor"]
 
-class OnboardingProfileIn(BaseModel):
-    data: Dict = Field(default_factory=dict)
+class OnboardingProfileIn(StrictBaseModel):
+    data: Dict[ShortText, Any] = Field(default_factory=dict, max_length=25)
 
-class VerifyOtpIn(BaseModel):
+    @field_validator("data")
+    @classmethod
+    def validate_data(cls, data: Dict[str, Any]) -> Dict[str, Any]:
+        allowed = {
+            "avatar", "avatar_b64", "profile_name", "company", "bio", "creator_types", "video_types",
+            "role_detail", "hire_frequency", "monthly_budget", "country", "languages", "timezone",
+            "experience_level", "years_experience", "categories", "software", "hourly_rate",
+            "starting_price", "currency", "social_links", "portfolio_links", "connected_accounts",
+            "portfolio_videos", "availability",
+        }
+        if set(data) - allowed:
+            raise ValueError("Unsupported onboarding profile fields")
+        for key, value in data.items():
+            if key in {"creator_types", "video_types", "categories", "software", "portfolio_videos"}:
+                if not isinstance(value, list) or len(value) > 30 or not all(isinstance(v, str) and 1 <= len(v) <= 300 and not any(ch in v for ch in "\r\n<>") for v in value):
+                    raise ValueError(f"{key} must be a list of safe strings")
+            elif key in {"social_links", "portfolio_links", "connected_accounts"}:
+                if not isinstance(value, dict) or len(value) > 20:
+                    raise ValueError(f"{key} must be an object")
+                for link_key, link_value in value.items():
+                    if not isinstance(link_key, str) or not isinstance(link_value, str):
+                        raise ValueError(f"{key} keys and values must be strings")
+                    if len(link_key) > 80 or len(link_value) > 500 or any(ch in link_key + link_value for ch in "\r\n<>"):
+                        raise ValueError(f"{key} contains an invalid string")
+                    if link_value and not link_value.startswith(("http://", "https://")):
+                        raise ValueError(f"{key} URLs must start with http:// or https://")
+            elif key in {"hourly_rate", "starting_price"}:
+                if value != "" and (not isinstance(value, (int, float)) or isinstance(value, bool) or value < 0 or value > 1_000_000):
+                    raise ValueError(f"{key} must be a non-negative number")
+            elif not isinstance(value, str) or len(value) > 3000 or any(ch in value for ch in "\r\n<>"):
+                raise ValueError(f"{key} must be a safe string")
+        return data
+
+class VerifyOtpIn(StrictBaseModel):
     email: EmailStr
-    otp: str
+    otp: OtpText
     type: Literal["email", "phone"]
 
-class VerifyLoginOtpIn(BaseModel):
+class VerifyLoginOtpIn(StrictBaseModel):
     email: EmailStr
-    otp: str
+    otp: OtpText
     remember_me: bool = False
 
-class ResendOtpIn(BaseModel):
+class ResendOtpIn(StrictBaseModel):
     email: EmailStr
     type: Literal["email", "phone"]
 
-class UpdatePhoneIn(BaseModel):
-    phone: str
+class UpdatePhoneIn(StrictBaseModel):
+    phone: PhoneText
 
-class ForgotIn(BaseModel):
+class ForgotIn(StrictBaseModel):
     email: EmailStr
 
-class ResetIn(BaseModel):
-    token: str
-    new_password: str = Field(min_length=6)
+class ResetIn(StrictBaseModel):
+    token: TokenText
+    new_password: PasswordText
 
-class EditorProfileIn(BaseModel):
-    bio: Optional[str] = None
-    skills: Optional[List[str]] = None
-    hourly_rate: Optional[float] = None
-    starting_price: Optional[float] = None
-    portfolio: Optional[List[dict]] = None       # [{title,thumbnail_b64,url,description}]
-    avatar_b64: Optional[str] = None
-    cover_b64: Optional[str] = None
-    location: Optional[str] = None
-    languages: Optional[List[str]] = None
-    software: Optional[List[str]] = None
+class EditorProfileIn(StrictBaseModel):
+    bio: Optional[LongText] = None
+    skills: Optional[SafeStringList] = None
+    hourly_rate: Optional[Rate] = None
+    starting_price: Optional[Money] = None
+    portfolio: Optional[Annotated[List[PortfolioItem], Field(min_length=0, max_length=20)]] = None
+    avatar_b64: Optional[DataUrlText] = None
+    cover_b64: Optional[DataUrlText] = None
+    location: Optional[ShortText] = None
+    languages: Optional[SafeStringList] = None
+    software: Optional[SafeStringList] = None
 
-class ProjectRequestIn(BaseModel):
-    editor_id: str
-    title: str
-    description: str
-    content_type: str
-    editing_style: str
+class ProjectRequestIn(StrictBaseModel):
+    editor_id: UserId
+    title: MediumText
+    description: LongText
+    content_type: ShortText
+    editing_style: ShortText
     motion_graphics: bool
-    footage_size: str
-    budget: float
-    deadline: str        # one of "24h","3d","7d","14d","30d" or ISO date
+    footage_size: ShortText
+    budget: Money
+    deadline: DeadlineText
 
-class MessageIn(BaseModel):
-    conversation_id: str
-    text: Optional[str] = None
-    attachment_b64: Optional[str] = None
+class MessageIn(StrictBaseModel):
+    conversation_id: UserId
+    text: Optional[LongText] = None
+    attachment_b64: Optional[DataUrlText] = None
     attachment_type: Optional[Literal["image", "video", "file"]] = None
-    attachment_name: Optional[str] = None
+    attachment_name: Optional[ShortText] = None
 
-class ReportIn(BaseModel):
-    target_user_id: str
+    @model_validator(mode="after")
+    def require_text_or_attachment(self):
+        if not self.text and not self.attachment_b64:
+            raise ValueError("Either text or attachment_b64 is required")
+        if self.attachment_b64 and not self.attachment_type:
+            raise ValueError("attachment_type is required with attachment_b64")
+        return self
+
+class ConversationStartIn(StrictBaseModel):
+    user_id: UserId
+
+class BlockUserIn(StrictBaseModel):
+    user_id: UserId
+
+class ReportIn(StrictBaseModel):
+    target_user_id: UserId
     kind: Literal["profile", "scam", "spam", "fake_review", "other"]
-    reason: str
+    reason: LongText
 
-class ReviewIn(BaseModel):
-    editor_id: str
-    project_id: Optional[str] = None
+class ReviewIn(StrictBaseModel):
+    editor_id: UserId
+    project_id: Optional[UserId] = None
     rating: int = Field(ge=1, le=5)
-    comment: str
+    comment: LongText
 
-class StatusUpdateIn(BaseModel):
+class StatusUpdateIn(StrictBaseModel):
     status: Literal["pending", "in_progress", "completed", "cancelled"]
 
-class AdminActionIn(BaseModel):
+class AdminActionIn(StrictBaseModel):
     action: Literal["approve", "reject", "suspend", "ban", "unban"]
-    reason: Optional[str] = None
+    reason: Optional[LongText] = None
 
 # ------------------------------- Auth endpoints --------------------------------
 import traceback
@@ -1097,9 +1174,13 @@ async def reset(body: ResetIn):
 
 # ------------------------------- Editors --------------------------------
 @api.get("/editors")
-async def list_editors(skill: Optional[str] = None, badge: Optional[str] = None,
-                       min_price: Optional[float] = None, max_price: Optional[float] = None,
-                       q: Optional[str] = None):
+async def list_editors(
+    skill: Annotated[Optional[str], Query(min_length=1, max_length=80, pattern=SAFE_TEXT_RE)] = None,
+    badge: Annotated[Optional[str], Query(min_length=1, max_length=80, pattern=SAFE_TEXT_RE)] = None,
+    min_price: Annotated[Optional[float], Query(ge=0, le=1_000_000)] = None,
+    max_price: Annotated[Optional[float], Query(ge=0, le=1_000_000)] = None,
+    q: Annotated[Optional[str], Query(min_length=1, max_length=80, pattern=SAFE_TEXT_RE)] = None,
+):
     query = {"is_public": True}
     if skill: query["skills"] = skill
     if badge: query["badges"] = badge
@@ -1124,7 +1205,7 @@ async def list_editors(skill: Optional[str] = None, badge: Optional[str] = None,
     return out
 
 @api.get("/editors/{editor_id}")
-async def get_editor(editor_id: str):
+async def get_editor(editor_id: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)]):
     e = await db.editors.find_one({"id": editor_id}, {"_id": 0})
     if not e:
         raise HTTPException(404, "Editor not found")
@@ -1182,8 +1263,8 @@ async def get_or_create_conversation(user_a: str, user_b: str) -> dict:
     return conv
 
 @api.post("/conversations/start")
-async def start_conversation(payload: dict, user=Depends(get_current_user)):
-    other = payload.get("user_id")
+async def start_conversation(payload: ConversationStartIn, user=Depends(get_current_user)):
+    other = payload.user_id
     if not other or other == user["id"]:
         raise HTTPException(400, "Invalid user_id")
     other_user = await db.users.find_one({"id": other})
@@ -1215,7 +1296,7 @@ async def list_conversations(user=Depends(get_current_user)):
     return out
 
 @api.get("/conversations/{conv_id}/messages")
-async def list_messages(conv_id: str, user=Depends(get_current_user)):
+async def list_messages(conv_id: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], user=Depends(get_current_user)):
     conv = await db.conversations.find_one({"id": conv_id})
     if not conv or user["id"] not in conv["participants"]:
         raise HTTPException(404, "Conversation not found")
@@ -1274,7 +1355,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 @app.websocket("/api/ws")
-async def ws_endpoint(websocket: WebSocket, token: str = Query(None)):
+async def ws_endpoint(websocket: WebSocket, token: Annotated[Optional[str], Query(min_length=16, max_length=4096, pattern=TOKEN_RE)] = None):
     if not token:
         await websocket.close(code=4401); return
     try:
@@ -1340,7 +1421,7 @@ async def list_projects(user=Depends(get_current_user)):
     return projs
 
 @api.patch("/projects/{pid}/status")
-async def update_project_status(pid: str, body: StatusUpdateIn, user=Depends(get_current_user)):
+async def update_project_status(pid: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], body: StatusUpdateIn, user=Depends(get_current_user)):
     proj = await db.projects.find_one({"id": pid})
     if not proj:
         raise HTTPException(404, "Project not found")
@@ -1415,9 +1496,8 @@ async def create_report(body: ReportIn, user=Depends(get_current_user)):
     return rep
 
 @api.post("/blocks")
-async def block_user(payload: dict, user=Depends(get_current_user)):
-    target = payload.get("user_id")
-    if not target: raise HTTPException(400, "user_id required")
+async def block_user(payload: BlockUserIn, user=Depends(get_current_user)):
+    target = payload.user_id
     await db.blocks.update_one({"blocker_id": user["id"], "blocked_id": target},
                                {"$set": {"created_at": now_utc().isoformat()}}, upsert=True)
     return {"ok": True}
@@ -1466,7 +1546,7 @@ async def admin_reviews(user=Depends(require_admin)):
     return await db.reviews.find({}, {"_id": 0}).sort("created_at", -1).to_list(1000)
 
 @api.post("/admin/reports/{rid}/action")
-async def admin_report_action(rid: str, body: AdminActionIn, user=Depends(require_admin)):
+async def admin_report_action(rid: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], body: AdminActionIn, user=Depends(require_admin)):
     rep = await db.reports.find_one({"id": rid})
     if not rep: raise HTTPException(404, "Report not found")
     status_map = {"approve": "resolved", "reject": "dismissed",
@@ -1482,7 +1562,7 @@ async def admin_report_action(rid: str, body: AdminActionIn, user=Depends(requir
     return {"ok": True}
 
 @api.post("/admin/users/{uid}/action")
-async def admin_user_action(uid: str, body: AdminActionIn, user=Depends(require_admin)):
+async def admin_user_action(uid: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], body: AdminActionIn, user=Depends(require_admin)):
     target = await db.users.find_one({"id": uid})
     if not target: raise HTTPException(404, "User not found")
     if body.action == "ban":
@@ -1497,7 +1577,7 @@ async def admin_user_action(uid: str, body: AdminActionIn, user=Depends(require_
     return {"ok": True}
 
 @api.delete("/admin/reviews/{rid}")
-async def admin_delete_review(rid: str, user=Depends(require_admin)):
+async def admin_delete_review(rid: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], user=Depends(require_admin)):
     r = await db.reviews.find_one({"id": rid})
     if not r: raise HTTPException(404, "Not found")
     await db.reviews.delete_one({"id": rid})
@@ -1505,21 +1585,21 @@ async def admin_delete_review(rid: str, user=Depends(require_admin)):
     return {"ok": True}
 
 # ------------------------------- Applications + Public projects ---------
-class PublicProjectIn(BaseModel):
-    title: str
-    description: str
-    content_type: str
-    editing_style: str
+class PublicProjectIn(StrictBaseModel):
+    title: MediumText
+    description: LongText
+    content_type: ShortText
+    editing_style: ShortText
     motion_graphics: bool
-    footage_size: str
-    budget: float
-    deadline: str
+    footage_size: ShortText
+    budget: Money
+    deadline: DeadlineText
 
-class ApplyIn(BaseModel):
-    project_id: str
-    proposal: str
-    proposed_budget: Optional[float] = None
-    proposed_deadline: Optional[str] = None
+class ApplyIn(StrictBaseModel):
+    project_id: UserId
+    proposal: LongText
+    proposed_budget: Optional[Money] = None
+    proposed_deadline: Optional[DeadlineText] = None
 
 @api.post("/projects/public")
 async def create_public_project(body: PublicProjectIn, user=Depends(get_current_user)):
@@ -1573,7 +1653,7 @@ async def apply_to_project(body: ApplyIn, user=Depends(get_current_user)):
     return app_doc
 
 @api.get("/applications/project/{project_id}")
-async def list_applications_for_project(project_id: str, user=Depends(get_current_user)):
+async def list_applications_for_project(project_id: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], user=Depends(get_current_user)):
     proj = await db.projects.find_one({"id": project_id})
     if not proj: raise HTTPException(404, "Project not found")
     if user["id"] != proj["client_id"] and user["role"] != "admin":
@@ -1602,7 +1682,7 @@ async def list_my_applications(user=Depends(get_current_user)):
     return apps
 
 @api.post("/applications/{app_id}/accept")
-async def accept_application(app_id: str, user=Depends(get_current_user)):
+async def accept_application(app_id: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], user=Depends(get_current_user)):
     """Client accepts → auto-create workspace: assign editor to project, open conversation, send system message."""
     app_doc = await db.applications.find_one({"id": app_id})
     if not app_doc: raise HTTPException(404, "Application not found")
@@ -1648,7 +1728,7 @@ async def accept_application(app_id: str, user=Depends(get_current_user)):
     return {"ok": True, "project_id": proj["id"], "conversation_id": conv["id"]}
 
 @api.post("/applications/{app_id}/decline")
-async def decline_application(app_id: str, user=Depends(get_current_user)):
+async def decline_application(app_id: Annotated[str, ApiPath(min_length=1, max_length=100, pattern=ID_RE)], user=Depends(get_current_user)):
     app_doc = await db.applications.find_one({"id": app_id})
     if not app_doc: raise HTTPException(404, "Application not found")
     if app_doc["client_id"] != user["id"]:
@@ -1657,13 +1737,13 @@ async def decline_application(app_id: str, user=Depends(get_current_user)):
     return {"ok": True}
 
 # ------------------------------- AI Match -----------------------------
-class AIMatchIn(BaseModel):
-    content_type: str
-    budget: float
-    deadline: str
-    editing_style: str
+class AIMatchIn(StrictBaseModel):
+    content_type: ShortText
+    budget: Money
+    deadline: DeadlineText
+    editing_style: ShortText
     motion_graphics: bool
-    footage_size: str
+    footage_size: ShortText
 
 @api.post("/ai/match")
 async def ai_match(body: AIMatchIn, user=Depends(get_current_user)):

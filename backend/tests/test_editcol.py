@@ -19,6 +19,7 @@ RUN = uuid.uuid4().hex[:8]
 CLIENT_EMAIL = f"test_client_{RUN}@example.com"
 EDITOR_EMAIL = f"test_editor_{RUN}@example.com"
 PASSWORD = "TestPass123!"
+DIGITS = "".join(str(int(ch, 16) % 10) for ch in RUN)
 
 state = {}
 
@@ -40,7 +41,7 @@ def test_health():
 def test_register_client():
     s = session()
     r = s.post(f"{API}/auth/register", json={
-        "name": "Test Client", "email": CLIENT_EMAIL, "phone": f"+1555{RUN[:7]}",
+        "name": "Test Client", "email": CLIENT_EMAIL, "phone": f"+1555{DIGITS[:7]}",
         "password": PASSWORD, "role": "client"
     })
     assert r.status_code == 200, r.text
@@ -61,7 +62,7 @@ def test_register_client():
 def test_register_editor_creates_private_editor():
     s = session()
     r = s.post(f"{API}/auth/register", json={
-        "name": "Test Editor", "email": EDITOR_EMAIL, "phone": f"+1666{RUN[:7]}",
+        "name": "Test Editor", "email": EDITOR_EMAIL, "phone": f"+1666{DIGITS[:7]}",
         "password": PASSWORD, "role": "editor"
     })
     assert r.status_code == 200, r.text
@@ -344,7 +345,7 @@ def test_brute_force_lock_after_5_attempts():
     target_email = f"TEST_brute_{RUN}@example.com"
     # Register user
     requests.post(f"{API}/auth/register", json={
-        "name": "BF", "email": target_email, "phone": f"+1777{RUN[:7]}",
+        "name": "BF", "email": target_email, "phone": f"+1777{DIGITS[:7]}",
         "password": PASSWORD, "role": "client"})
     for i in range(5):
         r = requests.post(f"{API}/auth/login", json={

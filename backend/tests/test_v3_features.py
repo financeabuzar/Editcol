@@ -28,8 +28,9 @@ def session():
 
 def _register_and_login(email, role):
     s = session()
+    phone_digits = "".join(str(int(ch, 16) % 10) for ch in uuid.uuid4().hex[:7])
     r = s.post(f"{API}/auth/register", json={
-        "name": f"V3 {role} {RUN}", "email": email, "phone": f"+1888{uuid.uuid4().hex[:7]}",
+        "name": f"V3 {role} {RUN}", "email": email, "phone": f"+1888{phone_digits}",
         "password": PASSWORD, "role": role
     })
     assert r.status_code == 200, r.text
