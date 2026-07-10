@@ -14,20 +14,31 @@ import logging
 import asyncio
 import base64
 import smtplib
+import hashlib
+import math
 from datetime import datetime, timezone, timedelta
 from email.message import EmailMessage
 from html import escape
-from typing import Optional, List, Literal, Dict, Set
+from typing import Optional, List, Literal, Dict, Set, Any
 
 import bcrypt
 import jwt
 import requests
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, WebSocket, WebSocketDisconnect, Query
+from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import ReturnDocument
 from pydantic import BaseModel, Field, EmailStr, ConfigDict
 
 # ------------------------------- Config --------------------------------
+def env_int(name: str, default: int, minimum: int = 1) -> int:
+    try:
+        value = int(os.environ.get(name, str(default)))
+        return max(minimum, value)
+    except (TypeError, ValueError):
+        return default
+
 MONGO_URL = os.environ['MONGO_URL']
 DB_NAME = os.environ['DB_NAME']
 JWT_SECRET = os.environ['JWT_SECRET']
@@ -57,6 +68,19 @@ print("=" * 60)
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() == "true"
 COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "none").lower()
 COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
+RATE_LIMIT_ENABLED = os.environ.get("RATE_LIMIT_ENABLED", "true").lower() == "true"
+RATE_LIMIT_AUTH_IP_LIMIT = env_int("RATE_LIMIT_AUTH_IP_LIMIT", 30)
+RATE_LIMIT_AUTH_ACCOUNT_LIMIT = env_int("RATE_LIMIT_AUTH_ACCOUNT_LIMIT", 10)
+RATE_LIMIT_AUTH_WINDOW_SECONDS = env_int("RATE_LIMIT_AUTH_WINDOW_SECONDS", 300)
+RATE_LIMIT_PUBLIC_IP_LIMIT = env_int("RATE_LIMIT_PUBLIC_IP_LIMIT", 120)
+RATE_LIMIT_PUBLIC_WINDOW_SECONDS = env_int("RATE_LIMIT_PUBLIC_WINDOW_SECONDS", 60)
+RATE_LIMIT_AUTHENTICATED_USER_LIMIT = env_int("RATE_LIMIT_AUTHENTICATED_USER_LIMIT", 600)
+RATE_LIMIT_AUTHENTICATED_WINDOW_SECONDS = env_int("RATE_LIMIT_AUTHENTICATED_WINDOW_SECONDS", 60)
+RATE_LIMIT_BACKOFF_FAILURES = env_int("RATE_LIMIT_BACKOFF_FAILURES", 5)
+RATE_LIMIT_BACKOFF_INITIAL_SECONDS = env_int("RATE_LIMIT_BACKOFF_INITIAL_SECONDS", 60)
+RATE_LIMIT_BACKOFF_FACTOR = env_int("RATE_LIMIT_BACKOFF_FACTOR", 2)
+RATE_LIMIT_BACKOFF_MAX_SECONDS = env_int("RATE_LIMIT_BACKOFF_MAX_SECONDS", 900)
+RATE_LIMIT_BACKOFF_FAILURE_WINDOW_SECONDS = env_int("RATE_LIMIT_BACKOFF_FAILURE_WINDOW_SECONDS", 3600)
 
 client = AsyncIOMotorClient(MONGO_URL)
 db = client[DB_NAME]
@@ -67,9 +91,219 @@ api = APIRouter(prefix="/api")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 log = logging.getLogger("editcol")
 
+SENSITIVE_AUTH_PATHS = {
+    "/api/auth/register",
+    "/api/auth/login",
+    "/api/auth/google",
+    "/api/auth/verify-login-otp",
+    "/api/auth/resend-login-otp",
+    "/api/auth/verify-otp",
+    "/api/auth/resend-otp",
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+    "/api/auth/refresh",
+}
+
+PUBLIC_READ_PATHS = {
+    "/api/",
+    "/api/health",
+    "/api/editors",
+}
+
 # ------------------------------- Utils ---------------------------------
 def now_utc() -> datetime:
     return datetime.now(timezone.utc)
+
+def parse_iso_datetime(value: Optional[str]) -> Optional[datetime]:
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
+
+def client_ip(request: Request) -> str:
+    forwarded_for = request.headers.get("x-forwarded-for", "")
+    if forwarded_for:
+        return forwarded_for.split(",")[0].strip()
+    return request.client.host if request.client else "unknown"
+
+def stable_key(value: str) -> str:
+    return hashlib.sha256(value.encode()).hexdigest()
+
+async def request_json_body(request: Request) -> dict:
+    body = await request.body()
+
+    async def receive():
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    request._receive = receive
+    if not body:
+        return {}
+    try:
+        parsed = json.loads(body.decode())
+        return parsed if isinstance(parsed, dict) else {}
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        return {}
+
+def account_key_for_auth_request(path: str, body: dict, request: Request) -> Optional[str]:
+    candidate = (
+        body.get("email")
+        or body.get("identifier")
+        or body.get("phone")
+        or body.get("token")
+        or body.get("credential")
+    )
+    if not candidate and path == "/api/auth/refresh":
+        candidate = request.cookies.get("refresh_token")
+    if not candidate:
+        return None
+    normalized = normalize_login_identifier(str(candidate))
+    return stable_key(normalized)
+
+def authenticated_subject(request: Request) -> Optional[str]:
+    token = request.cookies.get("access_token")
+    if not token:
+        auth = request.headers.get("Authorization", "")
+        if auth.startswith("Bearer "):
+            token = auth[7:]
+    if not token:
+        return None
+    try:
+        payload = decode_token(token)
+        if payload.get("type") == "access":
+            return payload.get("sub")
+    except jwt.InvalidTokenError:
+        return None
+    return None
+
+async def increment_rate_window(scope: str, identity: str, limit: int, window_seconds: int) -> Optional[int]:
+    timestamp = int(now_utc().timestamp())
+    window_start = timestamp - (timestamp % window_seconds)
+    key = f"{scope}:{identity}:{window_start}"
+    expires_at = (now_utc() + timedelta(seconds=window_seconds * 2)).isoformat()
+    result = await db.rate_limits.find_one_and_update(
+        {"key": key},
+        {
+            "$inc": {"count": 1},
+            "$setOnInsert": {"key": key, "scope": scope, "identity": identity, "window_start": window_start},
+            "$set": {"expires_at": expires_at},
+        },
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+    count = (result or {}).get("count", 1)
+    if count > limit:
+        return window_start + window_seconds - timestamp
+    return None
+
+async def enforce_rate_window(scope: str, identity: str, limit: int, window_seconds: int):
+    retry_after = await increment_rate_window(scope, identity, limit, window_seconds)
+    if retry_after is not None:
+        raise HTTPException(
+            429,
+            "Too many requests. Please slow down.",
+            headers={"Retry-After": str(max(1, retry_after))},
+        )
+
+def rate_limited_response(exc: HTTPException) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": exc.detail},
+        headers=getattr(exc, "headers", None),
+    )
+
+async def enforce_auth_backoff(ip: str, account_key: Optional[str]):
+    keys = [f"ip:{stable_key(ip)}"]
+    if account_key:
+        keys.append(f"account:{account_key}")
+    docs = await db.auth_rate_backoffs.find({"key": {"$in": keys}}).to_list(len(keys))
+    retry_after = 0
+    current = now_utc()
+    for doc in docs:
+        backoff_until = parse_iso_datetime(doc.get("backoff_until"))
+        if backoff_until and backoff_until > current:
+            retry_after = max(retry_after, math.ceil((backoff_until - current).total_seconds()))
+    if retry_after:
+        raise HTTPException(
+            429,
+            f"Too many failed attempts. Try again in {retry_after} seconds.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+async def record_auth_failure(ip: str, account_key: Optional[str]):
+    current = now_utc()
+    keys = [f"ip:{stable_key(ip)}"]
+    if account_key:
+        keys.append(f"account:{account_key}")
+    for key in keys:
+        existing = await db.auth_rate_backoffs.find_one({"key": key})
+        last_failure = parse_iso_datetime((existing or {}).get("last_failure"))
+        previous_failures = (existing or {}).get("failures", 0)
+        if not last_failure or last_failure < current - timedelta(seconds=RATE_LIMIT_BACKOFF_FAILURE_WINDOW_SECONDS):
+            previous_failures = 0
+        failures = previous_failures + 1
+        update: Dict[str, Any] = {
+            "key": key,
+            "failures": failures,
+            "last_failure": current.isoformat(),
+            "expires_at": (current + timedelta(seconds=RATE_LIMIT_BACKOFF_FAILURE_WINDOW_SECONDS)).isoformat(),
+        }
+        if failures >= RATE_LIMIT_BACKOFF_FAILURES:
+            exponent = failures - RATE_LIMIT_BACKOFF_FAILURES
+            delay = min(
+                RATE_LIMIT_BACKOFF_MAX_SECONDS,
+                RATE_LIMIT_BACKOFF_INITIAL_SECONDS * (RATE_LIMIT_BACKOFF_FACTOR ** exponent),
+            )
+            update["backoff_until"] = (current + timedelta(seconds=delay)).isoformat()
+        await db.auth_rate_backoffs.update_one({"key": key}, {"$set": update}, upsert=True)
+
+async def clear_auth_backoff(ip: str, account_key: Optional[str]):
+    keys = [f"ip:{stable_key(ip)}"]
+    if account_key:
+        keys.append(f"account:{account_key}")
+    await db.auth_rate_backoffs.delete_many({"key": {"$in": keys}})
+
+def is_public_endpoint(request: Request) -> bool:
+    path = request.url.path
+    if path in PUBLIC_READ_PATHS:
+        return True
+    return request.method == "GET" and path.startswith("/api/editors/")
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    if not RATE_LIMIT_ENABLED or not request.url.path.startswith("/api"):
+        return await call_next(request)
+
+    path = request.url.path
+    ip = client_ip(request)
+    account_key = None
+    try:
+        if path in SENSITIVE_AUTH_PATHS:
+            body = await request_json_body(request)
+            account_key = account_key_for_auth_request(path, body, request)
+            await enforce_rate_window("auth-ip", stable_key(ip), RATE_LIMIT_AUTH_IP_LIMIT, RATE_LIMIT_AUTH_WINDOW_SECONDS)
+            if account_key:
+                await enforce_rate_window("auth-account", account_key, RATE_LIMIT_AUTH_ACCOUNT_LIMIT, RATE_LIMIT_AUTH_WINDOW_SECONDS)
+            await enforce_auth_backoff(ip, account_key)
+        else:
+            subject = authenticated_subject(request)
+            if subject:
+                await enforce_rate_window(
+                    "authenticated-user",
+                    stable_key(subject),
+                    RATE_LIMIT_AUTHENTICATED_USER_LIMIT,
+                    RATE_LIMIT_AUTHENTICATED_WINDOW_SECONDS,
+                )
+            elif is_public_endpoint(request) or not subject:
+                await enforce_rate_window("public-ip", stable_key(ip), RATE_LIMIT_PUBLIC_IP_LIMIT, RATE_LIMIT_PUBLIC_WINDOW_SECONDS)
+    except HTTPException as exc:
+        return rate_limited_response(exc)
+
+    response = await call_next(request)
+    if path in SENSITIVE_AUTH_PATHS and path != "/api/auth/login" and response.status_code in (400, 401):
+        await record_auth_failure(ip, account_key)
+    return response
 
 def hash_password(pw: str) -> str:
     return bcrypt.hashpw(pw.encode(), bcrypt.gensalt()).decode()
@@ -535,27 +769,19 @@ async def register(body: RegisterIn, response: Response):
 @api.post("/auth/login")
 async def login(body: LoginIn, request: Request, response: Response):
     login_identifier = normalize_login_identifier(body.email)
-    ip = request.client.host if request.client else "unknown"
-    identifier = f"{ip}:{login_identifier}"
-
-    attempts = await db.login_attempts.find_one({"identifier": identifier})
-    if attempts and attempts.get("locked_until") and datetime.fromisoformat(attempts["locked_until"]) > now_utc():
-        raise HTTPException(429, "Too many attempts. Try again later.")
+    ip = client_ip(request)
+    account_key = stable_key(login_identifier)
 
     user_query = {"email": login_identifier} if "@" in login_identifier else {"phone": login_identifier}
     user = await db.users.find_one(user_query)
     if not user or not verify_password(body.password, user["password_hash"]):
-        new_count = (attempts or {}).get("count", 0) + 1
-        update = {"identifier": identifier, "count": new_count, "last_attempt": now_utc().isoformat()}
-        if new_count >= 5:
-            update["locked_until"] = (now_utc() + timedelta(minutes=15)).isoformat()
-            update["count"] = 0
-        await db.login_attempts.update_one({"identifier": identifier}, {"$set": update}, upsert=True)
+        await record_auth_failure(ip, account_key)
         raise HTTPException(401, "Invalid credentials")
     if user.get("status") == "banned":
         raise HTTPException(403, "Account banned")
 
-    await db.login_attempts.delete_one({"identifier": identifier})
+    await clear_auth_backoff(ip, account_key)
+    await db.login_attempts.delete_one({"identifier": f"{ip}:{login_identifier}"})
     if LOGIN_OTP_REQUIRED and user["role"] != "admin":
         account_email = user["email"]
         await db.otp_codes.update_many({"email": account_email, "type": "login", "used": False},
@@ -1547,6 +1773,10 @@ async def startup():
     await db.otp_codes.create_index("email")
     await db.password_reset_tokens.create_index("token", unique=True)
     await db.login_attempts.create_index("identifier")
+    await db.rate_limits.create_index("key", unique=True)
+    await db.rate_limits.create_index("expires_at")
+    await db.auth_rate_backoffs.create_index("key", unique=True)
+    await db.auth_rate_backoffs.create_index("expires_at")
     await db.conversations.create_index("participants")
     await db.messages.create_index("conversation_id")
     await db.projects.create_index("client_id")
