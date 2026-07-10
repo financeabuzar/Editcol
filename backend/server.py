@@ -62,9 +62,6 @@ TWILIO_ACCOUNT_SID = os.environ.get("TWILIO_ACCOUNT_SID")
 TWILIO_AUTH_TOKEN = os.environ.get("TWILIO_AUTH_TOKEN")
 TWILIO_FROM_NUMBER = os.environ.get("TWILIO_FROM_NUMBER")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-print("=" * 60)
-print("GOOGLE_CLIENT_ID:", GOOGLE_CLIENT_ID)
-print("=" * 60)
 COOKIE_SECURE = os.environ.get("COOKIE_SECURE", "true").lower() == "true"
 COOKIE_SAMESITE = os.environ.get("COOKIE_SAMESITE", "none").lower()
 COOKIE_DOMAIN = os.environ.get("COOKIE_DOMAIN") or None
@@ -1159,8 +1156,10 @@ async def forgot(body: ForgotIn):
     expires = (now_utc() + timedelta(hours=1)).isoformat()
     await db.password_reset_tokens.insert_one({"token": token, "user_id": user["id"],
                                                "expires_at": expires, "used": False})
-    log.info(f"[RESET] {email} reset_token={token}")
-    return {"ok": True, "reset_token_dev": token}
+    if OTP_DEV_MODE:
+        log.info(f"[RESET] {email} reset_token={token}")
+        return {"ok": True, "reset_token_dev": token}
+    return {"ok": True}
 
 @api.post("/auth/reset-password")
 async def reset(body: ResetIn):

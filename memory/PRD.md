@@ -54,7 +54,7 @@ Improve V2 (do NOT redesign): replace Pricing in navbar, add premium motion desi
 - Iteration 3 (retest of fixes): 4/4 redirect scenarios GREEN, role grammar fixed. All resolved.
 
 ## Test Credentials
-See `/app/memory/test_credentials.md`. Admin: `financeabuzar@gmail.com` / `EditColAdmin@2026!Secure`.
+Admin credentials are supplied through `ADMIN_EMAIL` and `ADMIN_PASSWORD` in the backend environment.
 
 ## Backlog
 **P1 (production)**

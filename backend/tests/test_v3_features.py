@@ -1,14 +1,21 @@
 """EditCol V3 backend tests — upgrade-to-editor, public projects, applications, AI match."""
 import os
 import uuid
+from pathlib import Path
 import pytest
 import requests
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8001').rstrip('/')
 API = f"{BASE_URL}/api"
 
-ADMIN_EMAIL = "financeabuzar@gmail.com"
-ADMIN_PASSWORD = "EditColAdmin@2026!Secure"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    pytest.skip("ADMIN_EMAIL and ADMIN_PASSWORD are required for backend integration tests", allow_module_level=True)
 
 RUN = uuid.uuid4().hex[:8]
 CLIENT_EMAIL = f"v3_client_{RUN}@example.com"

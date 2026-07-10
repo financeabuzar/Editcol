@@ -15,7 +15,7 @@
   ],
   "updated_files": [],
   "success_rate": { "backend": "not retested (was 100% in iter 2)", "frontend": "100% (4/4 scenarios + admin variant)" },
-  "test_credentials": "Admin financeabuzar@gmail.com / EditColAdmin@2026!Secure (verified working). For client retest a fresh user was registered via /register: v3rt_7742428@example.com / TestPass123! (phone 9283677743). IMPORTANT for future iterations: use a UNIQUE random phone number per test run; the backend correctly rejects duplicates with a 400 'Phone already registered'.",
+  "test_credentials": "Admin credentials are provided by ADMIN_EMAIL and ADMIN_PASSWORD. For client retest a fresh throwaway user was registered via /register. IMPORTANT for future iterations: use a UNIQUE random phone number per test run; the backend correctly rejects duplicates with a 400 'Phone already registered'.",
   "seed_data_creation": "1 new client user v3rt_7742428@example.com created and upgraded to editor during the test.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

@@ -30,7 +30,7 @@
   ],
   "updated_files": ["/app/backend/tests/test_v3_features.py", "/app/test_reports/iteration_2.json", "/app/test_reports/pytest/v3_results.xml"],
   "success_rate": {"backend": "100% on V3 (24/24); regression 25/26 (96%) — 1 flaky brute-force", "frontend": "~95% — all new pages and flows render correctly; one client-side redirect timing issue on /become-editor"},
-  "test_credentials": "Admin financeabuzar@gmail.com / EditColAdmin@2026!Secure — works. V3 backend tests created users v3_client_*, v3_editor1_*, v3_editor2_*, v3_upgrade_* (with random RUN suffix). UI test created v3ui_* user.",
+  "test_credentials": "Admin credentials are provided by ADMIN_EMAIL and ADMIN_PASSWORD. V3 backend tests created users v3_client_*, v3_editor1_*, v3_editor2_*, v3_upgrade_* (with random RUN suffix). UI test created v3ui_* user.",
   "seed_data_creation": "V3 backend tests created: 1 client, 2 public editors (with portfolios), 1 upgrade-flow client→editor, 1 public project (moved to in_progress with editor1 assigned), 2 applications (1 accepted, 1 auto-declined), 1 direct-hire pending project, 1 conversation with system message. UI test created 1 additional client v3ui_* (upgraded to editor after the upgrade-to-editor click).",
   "retest_needed": true,
   "main_agent_can_self_test": true,

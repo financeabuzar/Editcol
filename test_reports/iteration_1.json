@@ -25,7 +25,7 @@
   ],
   "updated_files": ["/app/backend/tests/test_editcol.py", "/app/test_reports/pytest/pytest_results.xml", "/app/test_reports/iteration_1.json"],
   "success_rate": {"backend": "100% (26/26)", "frontend": "100% (all flows tested passed)"},
-  "test_credentials": "Admin financeabuzar@gmail.com / EditColAdmin@2026!Secure — works. Test users created per-run with random suffix.",
+  "test_credentials": "Admin credentials are provided by ADMIN_EMAIL and ADMIN_PASSWORD. Test users created per-run with random suffix.",
   "seed_data_creation": "Backend tests created 2 editors (public), 1 project, 1 conversation, 1 review, 1 report (resolved/banned), 1 brute-force test user. Frontend tests created 2 additional client users via /register.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

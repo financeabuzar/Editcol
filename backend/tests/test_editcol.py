@@ -4,15 +4,22 @@ import time
 import uuid
 import asyncio
 import json
+from pathlib import Path
 import pytest
 import requests
 import websockets
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).resolve().parents[1] / ".env")
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'http://localhost:8001').rstrip('/')
 API = f"{BASE_URL}/api"
 
-ADMIN_EMAIL = "financeabuzar@gmail.com"
-ADMIN_PASSWORD = "EditColAdmin@2026!Secure"
+ADMIN_EMAIL = os.environ.get("ADMIN_EMAIL")
+ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD")
+
+if not ADMIN_EMAIL or not ADMIN_PASSWORD:
+    pytest.skip("ADMIN_EMAIL and ADMIN_PASSWORD are required for backend integration tests", allow_module_level=True)
 
 # Unique per-run prefix so tests don't collide
 RUN = uuid.uuid4().hex[:8]
@@ -153,7 +160,8 @@ def test_forgot_and_reset_password():
     r = requests.post(f"{API}/auth/forgot-password", json={"email": CLIENT_EMAIL})
     assert r.status_code == 200
     token = r.json().get("reset_token_dev")
-    assert token
+    if not token:
+        pytest.skip("Password reset token is only returned when backend OTP_DEV_MODE is enabled")
     new_pw = "NewPass456!"
     r2 = requests.post(f"{API}/auth/reset-password",
                        json={"token": token, "new_password": new_pw})
