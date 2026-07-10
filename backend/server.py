@@ -25,10 +25,13 @@ import bcrypt
 import jwt
 import requests
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, WebSocket, WebSocketDisconnect, Query, Path as ApiPath
+from fastapi.exceptions import RequestValidationError
 from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo import ReturnDocument
+from pymongo.errors import PyMongoError
 from pydantic import BaseModel, Field, EmailStr, ConfigDict, field_validator, model_validator
 
 # ------------------------------- Config --------------------------------
@@ -87,6 +90,94 @@ api = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 log = logging.getLogger("editcol")
+
+GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again."
+GENERIC_DATABASE_ERROR_MESSAGE = "We could not complete that request right now. Please try again."
+GENERIC_VALIDATION_ERROR_MESSAGE = "Invalid request. Check your input and try again."
+
+SAFE_HTTP_MESSAGES = {
+    400: "Invalid request. Check your input and try again.",
+    401: "Please sign in to continue.",
+    403: "You do not have permission to perform this action.",
+    404: "We could not find what you requested.",
+    405: "That action is not supported.",
+    409: "That request conflicts with the current state.",
+    413: "The uploaded content is too large.",
+    422: GENERIC_VALIDATION_ERROR_MESSAGE,
+    429: "Too many requests. Please slow down.",
+}
+
+UNSAFE_ERROR_TOKENS = (
+    "traceback",
+    "file \"",
+    "line ",
+    "winerror",
+    "errno",
+    "mongodb",
+    "pymongo",
+    "duplicate key",
+    "e11000",
+    "objectid",
+    "d:\\",
+    "c:\\",
+    "/app/",
+    "/users/",
+    "/home/",
+    "site-packages",
+    "stack",
+)
+
+def request_context(request: Request) -> dict:
+    return {
+        "method": request.method,
+        "path": request.url.path,
+        "client": client_ip(request),
+    }
+
+def is_safe_error_message(message: str) -> bool:
+    lowered = message.lower()
+    return not any(token in lowered for token in UNSAFE_ERROR_TOKENS)
+
+def public_error_message(status_code: int, detail=None) -> str:
+    if isinstance(detail, str) and is_safe_error_message(detail):
+        return detail
+    return SAFE_HTTP_MESSAGES.get(status_code, GENERIC_ERROR_MESSAGE)
+
+def error_response(status_code: int, message: str, headers: Optional[dict] = None) -> JSONResponse:
+    return JSONResponse(
+        status_code=status_code,
+        content={"detail": message},
+        headers=headers,
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    log.warning("Request validation failed", extra={**request_context(request), "errors": exc.errors()})
+    return error_response(422, GENERIC_VALIDATION_ERROR_MESSAGE)
+
+@app.exception_handler(HTTPException)
+async def fastapi_http_exception_handler(request: Request, exc: HTTPException):
+    message = public_error_message(exc.status_code, exc.detail)
+    if message != exc.detail:
+        log.warning("Sanitized HTTP error detail", extra={**request_context(request), "status_code": exc.status_code, "detail": exc.detail})
+    return error_response(exc.status_code, message, getattr(exc, "headers", None))
+
+@app.exception_handler(StarletteHTTPException)
+async def starlette_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    message = public_error_message(exc.status_code, exc.detail)
+    if message != exc.detail:
+        log.warning("Sanitized Starlette HTTP error detail", extra={**request_context(request), "status_code": exc.status_code, "detail": exc.detail})
+    return error_response(exc.status_code, message, getattr(exc, "headers", None))
+
+@app.exception_handler(PyMongoError)
+async def database_exception_handler(request: Request, exc: PyMongoError):
+    log.exception("Database operation failed", extra=request_context(request))
+    return error_response(500, GENERIC_DATABASE_ERROR_MESSAGE)
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    log.exception("Unhandled API error", extra=request_context(request))
+    return error_response(500, GENERIC_ERROR_MESSAGE)
 
 SENSITIVE_AUTH_PATHS = {
     "/api/auth/register",
@@ -204,11 +295,7 @@ async def enforce_rate_window(scope: str, identity: str, limit: int, window_seco
         )
 
 def rate_limited_response(exc: HTTPException) -> JSONResponse:
-    return JSONResponse(
-        status_code=exc.status_code,
-        content={"detail": exc.detail},
-        headers=getattr(exc, "headers", None),
-    )
+    return error_response(exc.status_code, public_error_message(exc.status_code, exc.detail), getattr(exc, "headers", None))
 
 async def enforce_auth_backoff(ip: str, account_key: Optional[str]):
     keys = [f"ip:{stable_key(ip)}"]
@@ -296,10 +383,21 @@ async def rate_limit_middleware(request: Request, call_next):
                 await enforce_rate_window("public-ip", stable_key(ip), RATE_LIMIT_PUBLIC_IP_LIMIT, RATE_LIMIT_PUBLIC_WINDOW_SECONDS)
     except HTTPException as exc:
         return rate_limited_response(exc)
+    except Exception:
+        log.exception("Rate-limit middleware failed", extra=request_context(request))
+        return error_response(500, GENERIC_ERROR_MESSAGE)
 
-    response = await call_next(request)
+    try:
+        response = await call_next(request)
+    except Exception:
+        log.exception("Unhandled request error", extra=request_context(request))
+        return error_response(500, GENERIC_ERROR_MESSAGE)
+
     if path in SENSITIVE_AUTH_PATHS and path != "/api/auth/login" and response.status_code in (400, 401):
-        await record_auth_failure(ip, account_key)
+        try:
+            await record_auth_failure(ip, account_key)
+        except Exception:
+            log.exception("Failed to record auth failure", extra=request_context(request))
     return response
 
 def hash_password(pw: str) -> str:
@@ -789,9 +887,6 @@ class AdminActionIn(StrictBaseModel):
     action: Literal["approve", "reject", "suspend", "ban", "unban"]
     reason: Optional[LongText] = None
 
-# ------------------------------- Auth endpoints --------------------------------
-import traceback
-
 @api.post("/auth/register")
 async def register(body: RegisterIn, response: Response):
     try:
@@ -831,13 +926,10 @@ async def register(body: RegisterIn, response: Response):
         set_auth_cookies(response, access, refresh, True)
         return auth_payload(user, access)
 
-    except Exception as e:
-        print("=" * 60)
-        print("REGISTER ERROR")
-        print(type(e))
-        print(e)
-        traceback.print_exc()
-        print("=" * 60)
+    except HTTPException:
+        raise
+    except Exception:
+        log.exception("Registration failed")
         raise
 
 @api.post("/auth/login")
