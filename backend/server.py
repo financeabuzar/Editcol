@@ -10,7 +10,6 @@ load_dotenv()
 import uuid
 import json
 import secrets
-import warnings
 import logging
 import asyncio
 import base64
@@ -27,7 +26,7 @@ import jwt
 import requests
 from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, WebSocket, WebSocketDisconnect, Query, Path as ApiPath
 from fastapi.exceptions import RequestValidationError
-from starlette.responses import JSONResponse, PlainTextResponse
+from starlette.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -91,15 +90,6 @@ api = APIRouter(prefix="/api")
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s %(levelname)s %(name)s %(message)s')
 log = logging.getLogger("editcol")
-
-JWT_SECRET_BYTES = JWT_SECRET.encode("utf-8")
-if len(JWT_SECRET_BYTES) < 32:
-    log.warning(
-        "JWT_SECRET is %s bytes; set a random secret of at least 32 bytes. "
-        "Using a derived signing key for compatibility.",
-        len(JWT_SECRET_BYTES),
-    )
-JWT_SIGNING_KEY = JWT_SECRET_BYTES if len(JWT_SECRET_BYTES) >= 32 else hashlib.sha256(JWT_SECRET_BYTES).digest()
 
 GENERIC_ERROR_MESSAGE = "Something went wrong. Please try again."
 GENERIC_DATABASE_ERROR_MESSAGE = "We could not complete that request right now. Please try again."
@@ -207,26 +197,6 @@ PUBLIC_READ_PATHS = {
     "/api/health",
     "/api/editors",
 }
-
-@app.api_route("/", methods=["GET", "HEAD"], include_in_schema=False)
-async def app_root(request: Request):
-    if request.method == "HEAD":
-        return Response(status_code=200)
-    return {"app": "EditCol V2 API", "status": "ok", "docs": "/docs", "health": "/api/health"}
-
-@app.get("/robots.txt", include_in_schema=False)
-async def robots_txt():
-    return PlainTextResponse("User-agent: *\nAllow: /\n")
-
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon_ico():
-    return Response(status_code=204)
-
-@app.get("/ads.txt", include_in_schema=False)
-@app.get("/app-ads.txt", include_in_schema=False)
-@app.get("/sellers.json", include_in_schema=False)
-async def unconfigured_ad_inventory_files():
-    return Response(status_code=204)
 
 # ------------------------------- Utils ---------------------------------
 def now_utc() -> datetime:
@@ -444,17 +414,10 @@ def create_token(user_id: str, role: str, ttl_min: int, ttype: str = "access") -
         "sub": user_id, "role": role,
         "exp": now_utc() + timedelta(minutes=ttl_min), "type": ttype,
     }
-    return jwt.encode(payload, JWT_SIGNING_KEY, algorithm=JWT_ALG)
+    return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALG)
 
 def decode_token(token: str) -> dict:
-    try:
-        return jwt.decode(token, JWT_SIGNING_KEY, algorithms=[JWT_ALG])
-    except jwt.InvalidSignatureError:
-        if JWT_SIGNING_KEY == JWT_SECRET_BYTES:
-            raise
-        with warnings.catch_warnings():
-            warnings.filterwarnings("ignore", message=".*HMAC key is .*below.*", category=Warning)
-            return jwt.decode(token, JWT_SECRET_BYTES, algorithms=[JWT_ALG])
+    return jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALG])
 
 def set_auth_cookies(resp: Response, access: str, refresh: str, remember: bool):
     max_age = REMEMBER_TTL_MIN * 60 if remember else ACCESS_TTL_MIN * 60
