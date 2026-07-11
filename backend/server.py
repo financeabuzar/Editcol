@@ -781,7 +781,7 @@ class OnboardingProfileIn(StrictBaseModel):
         if set(data) - allowed:
             raise ValueError("Unsupported onboarding profile fields")
         for key, value in data.items():
-            if key in {"creator_types", "video_types", "categories", "software", "portfolio_videos"}:
+            if key in {"creator_types", "video_types", "categories", "software", "portfolio_videos", "languages"}:
                 if not isinstance(value, list) or len(value) > 30 or not all(isinstance(v, str) and 1 <= len(v) <= 300 and not any(ch in v for ch in "\r\n<>") for v in value):
                     raise ValueError(f"{key} must be a list of safe strings")
             elif key in {"social_links", "portfolio_links", "connected_accounts"}:
