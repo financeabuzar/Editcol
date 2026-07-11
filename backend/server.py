@@ -10,6 +10,7 @@ load_dotenv()
 import uuid
 import json
 import secrets
+import warnings
 import logging
 import asyncio
 import base64
@@ -446,7 +447,14 @@ def create_token(user_id: str, role: str, ttl_min: int, ttype: str = "access") -
     return jwt.encode(payload, JWT_SIGNING_KEY, algorithm=JWT_ALG)
 
 def decode_token(token: str) -> dict:
-    return jwt.decode(token, JWT_SIGNING_KEY, algorithms=[JWT_ALG])
+    try:
+        return jwt.decode(token, JWT_SIGNING_KEY, algorithms=[JWT_ALG])
+    except jwt.InvalidSignatureError:
+        if JWT_SIGNING_KEY == JWT_SECRET_BYTES:
+            raise
+        with warnings.catch_warnings():
+            warnings.filterwarnings("ignore", message=".*HMAC key is .*below.*", category=Warning)
+            return jwt.decode(token, JWT_SECRET_BYTES, algorithms=[JWT_ALG])
 
 def set_auth_cookies(resp: Response, access: str, refresh: str, remember: bool):
     max_age = REMEMBER_TTL_MIN * 60 if remember else ACCESS_TTL_MIN * 60
